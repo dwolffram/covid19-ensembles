@@ -1,5 +1,4 @@
-setwd("D:/Dokumente/Workspace2/covid19-ensembles")
-
+setwd("/home/dwolffram/covid19-ensembles")
 
 source("functions.R")
 source("ensemble_methods.R")

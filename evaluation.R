@@ -1,4 +1,4 @@
-setwd("D:/Dokumente/Workspace2/covid19-ensembles")
+setwd("/home/dwolffram/covid19-ensembles")
 
 #library(quantreg)
 
@@ -50,10 +50,12 @@ subset(df, target_end_date %in% possible_dates) %>%
 
 #"2020-05-09" "2020-05-16" "2020-05-23" "2020-05-30" "2020-06-06" "2020-06-13" "2020-06-20"
 
-test_dates <- possible_dates[5:7]
+#test_dates <- possible_dates[5:length(possible_dates)]
+test_dates <- possible_dates
 
-window_size = 4
-train_start = test_dates - window_size*7
+
+#window_size = 4
+#train_start = test_dates - window_size*7
 
 
 train_test_split <- function(df, test_date, window_size){
@@ -62,6 +64,19 @@ train_test_split <- function(df, test_date, window_size){
   df_train = subset(df, (target_end_date < test_date) & (target_end_date >= train_start))
   return(list(df_train=df_train, df_test=df_test))
 }
+
+for(window_size in window_sizes){
+  print(window_size)
+  df_temp <- setNames(data.frame(matrix(ncol = length(ensembles), nrow = 0)), ensembles)
+  
+  for(test_date in as.list(test_dates[(window_size+1):length(test_dates)])){
+    print(as.character(test_date))
+    dfs <- train_test_split(df, test_date, window_size)
+    df_train <- dfs$df_train
+    df_test <- dfs$df_test
+  }
+}
+
 
 for(test_date in as.list(test_dates)){
   print(test_date)
@@ -80,9 +95,7 @@ groups <- data.frame(quantile=c(g1, g2, g3, g4, g5),
 
 
 ensembles <- c("EWA", "V2", "V3", "V4", "QRA3", "QRA4", "GQRA2", "GQRA3", "GQRA4")
-#ensembles <- c("EWA", "QRA2", "QRA3", "QRA4")
 
-window_sizes <- 4:4
 window_sizes <- 1:4
 
 evaluate_ensembles <- function(df, test_dates, window_sizes, ensembles){
@@ -92,7 +105,7 @@ evaluate_ensembles <- function(df, test_dates, window_sizes, ensembles){
     print(window_size)
     df_temp <- setNames(data.frame(matrix(ncol = length(ensembles), nrow = 0)), ensembles)
     
-    for(test_date in as.list(test_dates)){
+    for(test_date in as.list(test_dates[(window_size+1):length(test_dates)])){
       print(as.character(test_date))
       dfs <- train_test_split(df, test_date, window_size)
       df_train <- dfs$df_train
@@ -142,7 +155,7 @@ evaluate_ensembles <- function(df, test_dates, window_sizes, ensembles){
       df_temp[nrow(df_temp)+1, ] <- scores
     }
     
-    df_temp$test_date <- test_dates
+    df_temp$test_date <- test_dates[(window_size+1):length(test_dates)]
     df_temp$window_size <- window_size
     df_scores <- bind_rows(df_scores, df_temp)
   }
@@ -156,7 +169,7 @@ evaluate_ensembles <- function(df, test_dates, window_sizes, ensembles){
 
 results <- evaluate_ensembles(df, test_dates, window_sizes, ensembles)
 
-write.csv(results, "results2.csv", row.names=FALSE)
+write.csv(results, "results/results3.csv", row.names=FALSE)
 
 
 results <- read.csv("results.csv")

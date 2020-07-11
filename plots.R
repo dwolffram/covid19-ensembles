@@ -1,4 +1,4 @@
-setwd("D:/Dokumente/Workspace2/covid19-ensembles")
+setwd("/home/dwolffram/covid19-ensembles")
 # 
 # library(tidyverse)
 # library(dplyr)

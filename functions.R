@@ -1,4 +1,4 @@
-setwd("D:/Dokumente/Workspace2/covid19-forecast-hub")
+setwd("/home/dwolffram/covid19-ensembles")
 
 path_hub <- "../covid19-forecast-hub/"
 
@@ -16,13 +16,12 @@ load_df <- function(models=c("LANL-GrowthRate", "MIT_CovidAnalytics-DELPHI",
   df <- data.frame()
   for (m in models){
     print(m)
-    df_temp <- list.files(path=paste0("data-processed/", m), pattern=".csv$", full.names = TRUE) %>% 
+    df_temp <- list.files(path=paste0(path_hub, "data-processed/", m), pattern=".csv$", full.names = TRUE) %>% 
       lapply(read_csv, col_types = cols(
         forecast_date = col_date(format = ""),
         target = col_character(),
         target_end_date = col_date(format = ""),
         location = col_character(),
-        location_name = col_character(),
         type = col_character(),
         quantile = col_double(),
         value = col_double()
@@ -37,9 +36,9 @@ load_df <- function(models=c("LANL-GrowthRate", "MIT_CovidAnalytics-DELPHI",
   df <- df %>% filter(type=="quantile")
   
   # change location_name from None to US (where it's missing)
-  df <- df %>% mutate(location_name = replace(location_name, 
-                                             location=="US" & location_name=="None",
-                                             "US"))
+  # df <- df %>% mutate(location_name = replace(location_name, 
+  #                                            location=="US" & location_name=="None",
+  #                                            "US"))
   
   # remove locations given by exclude_locations
   df <- df %>% filter(!(location %in% exclude_locations))

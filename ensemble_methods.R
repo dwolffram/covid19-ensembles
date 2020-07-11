@@ -194,9 +194,14 @@ qra4_loss <- function(df, params, intercepts){
 QRA2 <- function(df, params){
   models <- unique(df$model)
   last_param <- models[!(models %in% unique(params$model))]
+
+  print(params %>% 
+          group_by(quantile) %>% 
+          summarize(param=1-sum(param)) %>% 
+          mutate(model=last_param))
   params <- rbind(params, params %>% 
                     group_by(quantile) %>% 
-                    summarize(param=1-sum(param), .groups="keep") %>% 
+                    summarize(param=1-sum(param)) %>% 
                     mutate(model=last_param)) 
   df_temp <- merge(df, params, by.x = c("model", "quantile"), by.y = c("model", "quantile"))
   qra3 <- data.frame(
@@ -209,7 +214,9 @@ QRA2 <- function(df, params){
 
 qra2_loss <- function(df, params){
   quantile_levels <- sort(unique(df$quantile))
-  params <- data.frame(model=rep(models[-length(models)], each=23), quantile=quantile_levels, param=params)
+  params <- data.frame(model=rep(models[-length(models)], each=23), 
+                       quantile=rep(quantile_levels, length(models)-1),
+                       param=params)
   df_temp <- QRA2(df, params)
   return(mean_wis(df_temp))
 }
@@ -218,8 +225,8 @@ qra2_fit <- function(df){
   quantile_levels <- sort(unique(df$quantile))
   n_quantiles <- length(quantile_levels)
   models <- unique(df$model)
-  models <- models[-length(models)]  # drop last model
-  n_models <- length(models)
+  #models <- models[-length(models)]  # drop last model
+  n_models <- length(models) - 1
   
   # feasible region: ui %*% theta - ci >= 0
   r <- c(rep(0, n_models*n_quantiles), rep(-1, n_quantiles))
@@ -238,7 +245,7 @@ qra2_fit <- function(df){
                            return(qra2_loss(df, params = x))},
                          ui=R, ci=r, method="Nelder-Mead")$par
     
-  params <- data.frame(model=rep(models, each=23), quantile=quantile_levels, param=params)
+  params <- data.frame(model=rep(models, each=23), quantile=rep(quantile_levels, n_models), param=params)
   
   return(params)
 }
@@ -386,7 +393,7 @@ GQRA_2 <- function(df, groups, params){
   # infer parameters for each quantile group from given parameters 1-sum(given params)
   params <- rbind(params, params %>% 
                     group_by(quantile_group) %>% 
-                    summarize(param=1-sum(param), .groups="keep") %>% 
+                    summarize(param=1-sum(param)) %>% 
                     mutate(model=last_param)) 
   
   df_temp <- merge(df, groups, by.x = c("quantile"), by.y = c("quantile"))
