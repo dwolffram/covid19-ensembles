@@ -1,5 +1,6 @@
 setwd("/home/dwolffram/covid19-ensembles")
-
+library(tidyverse)
+library(dplyr)
 results = read.csv('results/results3.csv',
                    colClasses = c(window_size = "factor", test_date = "Date"))
 
@@ -28,14 +29,21 @@ plot_comparison <- function(model_name="EWA"){
 }
 
 plot_comparison("EWA")
+ggsave('plots/comp_EWA.png', width=24, height=12, dpi=500, unit='cm', device='png')
 plot_comparison("V3")
+ggsave('plots/comp_V3.png', width=24, height=12, dpi=500, unit='cm', device='png')
 plot_comparison("GQRA2")
+ggsave('plots/comp_GQRA2', width=24, height=12, dpi=500, unit='cm', device='png')
 plot_comparison("V2")
+ggsave('plots/comp_V2.png', width=24, height=12, dpi=500, unit='cm', device='png')
+
 
 ggplot(data = results_long, aes(x = model, y = wis)) +
   #facet_wrap(~window_size) +
   geom_boxplot(outlier.shape=NA) +
   ylim(0, 100)
+ggsave('plots/boxplot.png', width=24, height=12, dpi=500, unit='cm', device='png')
+
 
 ggplot(data = results_long, aes(x = window_size, y = wis)) +
   facet_wrap(~model) +
@@ -132,18 +140,18 @@ bump_chart()
 bump_chart("4", c("EWA","V3","QRA3", "GQRA3"))
 
 bump_chart(1)
-ggsave('plots/bump_chart_ws1.png', device='png')
+ggsave('plots/bump_chart_ws1.png', width=24, height=12, dpi=500, unit='cm', device='png')
 bump_chart(2)
-ggsave('plots/bump_chart_ws2.png', device='png')
+ggsave('plots/bump_chart_ws2.png', width=24, height=12, dpi=500, unit='cm', device='png')
 bump_chart(3)
-ggsave('plots/bump_chart_ws3.png', device='png')
+ggsave('plots/bump_chart_ws3.png', width=24, height=12, dpi=500, unit='cm', device='png')
 bump_chart(4)
-ggsave('plots/bump_chart_ws4.png', device='png')
+ggsave('plots/bump_chart_ws4.png', width=24, height=12, dpi=500, unit='cm', device='png')
 
 bump_chart(4, c("EWA","V3","QRA3", "GQRA3"))
 
 bump_chart(4, c("EWA"))
-ggsave('plots/bump_chart_EWA.png', device='png')
+ggsave('plots/bump_chart_EWA.png', width=24, height=12, dpi=500, unit='cm', device='png')
 
 
 
