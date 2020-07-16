@@ -103,94 +103,18 @@ qra4_loss(df_test, p_qra4$params, p_qra4$intercepts)
 
 ### QRA2
 
-p_qra2 <- qra2_fit(df_train)
-
-
-qra2_loss <- function(df, params){
-  params <- data.frame(model=rep(models[-length(models)], each=23), quantile=quantile_levels, param=params)
-  df_temp <- QRA2(df, params)
-  return(mean_wis(df_temp))
-}
-
-
-qra2_fit <- function(df){
-  quantile_levels <- sort(unique(df$quantile))
-  models <- unique(df$model)
-  models <- models[-length(models)]  # drop last model
-  n_models <- length(models)
-  
-  #for linear inequality constraints: Rb >= r
-  R = rbind(diag(n_models - 1), rep(-1, n_models - 1))
-  r = c(rep(0, n_models - 1), -1)
-  
-  df_params <- data.frame()
-  #drop one model # TODO: CHECK THIS, shouldnt be dropped completely?
-  #df2 <- subset(df, model!=tail(models, 1))
-  for (quantile_level in quantile_levels){
-    df_temp <- subset(df, quantile==quantile_level) %>% 
-      select(c("target_end_date", "location", "truth", "model", "value")) %>% 
-      spread(model, value) %>% 
-      drop_na()
-    
-    params <- try(rq(truth ~ . - target_end_date - location -1, 
-                     tau = quantile_level, R=R, r=r, data = df_temp, method="fnc")$coefficients)
-    # in case of singular design matrix user jitter
-    if("try-error" %in% class(params)){
-      params <- rq(jitter(truth) ~ . - target_end_date - location -1, 
-                   tau = quantile_level, R=R, r=r, data = df_temp, method="fnc")$coefficients
-    }
-    
-    params <- data.frame(model=str_sub(names(params), 2, -2), quantile=quantile_level, 
-                         param=params, row.names = NULL)
-    df_params <- bind_rows(df_params, params)
-  }
-  
-  return(df_params)
-}
-
-quantile_levels <- sort(unique(df_train$quantile))
-n_quantiles <- length(quantile_levels)
-models <- unique(df_train$model)
-models <- models[-length(models)]  # drop last model
-n_models <- length(models)
-# feasible region: ui %*% theta - ci >= 0
-r <- c(rep(0, n_models*n_quantiles), rep(-1, n_quantiles))
-R <- diag(n_models*n_quantiles)
-
-R_l <- matrix(0, nrow=n_quantiles, ncol=n_models*n_quantiles)
-for (i in 1:n_quantiles){
-  for (j in 1:n_models){
-    R_l[i, i + (j-1)*n_quantiles] <- - 1
-  }
-}
-R <- rbind(R, R_l)
-
-
-p_optim <- constrOptim(theta = rep(1/(n_models*n_quantiles), n_models*n_quantiles), 
-                       f = function(x){
-                         return(qra2_loss(df_train, params = x))},
-                       ui=R, ci=r, method="Nelder-Mead")$par
-
-qra2_loss(df_test, p_optim)
-
-params2$param <- p_optim
-params2 %>% 
-  group_by(model, quantile) %>% 
-  summarize(sum(param))
-
-qra2_df <- QRA2(df_test, params2)
-mean_wis(qra2_df)
-
 params2 <- params %>% filter(model!=tail(models, 1))
 qra2_df <- QRA2(df_test, params2)
-
 qra2_loss(df_test, params2)
-qra2_loss(df_test, params2$param)
 
 
+mean(L(0.5, subset(qra2_df, quantile==0.5)$value, subset(qra2_df, quantile==0.5)$truth))
+fn(0.5, df_test, params2$param)
 
 p_qra2 <- qra2_fit(df_train)
 qra2_loss(df_test, p_qra2)
+
+
 
 ### GQRA_3
 params <- data.frame(model=rep(models, each=5), 

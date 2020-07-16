@@ -33,7 +33,7 @@ ggsave('plots/comp_EWA.png', width=24, height=12, dpi=500, unit='cm', device='pn
 plot_comparison("V3")
 ggsave('plots/comp_V3.png', width=24, height=12, dpi=500, unit='cm', device='png')
 plot_comparison("GQRA2")
-ggsave('plots/comp_GQRA2', width=24, height=12, dpi=500, unit='cm', device='png')
+ggsave('plots/comp_GQRA2.png', width=24, height=12, dpi=500, unit='cm', device='png')
 plot_comparison("V2")
 ggsave('plots/comp_V2.png', width=24, height=12, dpi=500, unit='cm', device='png')
 

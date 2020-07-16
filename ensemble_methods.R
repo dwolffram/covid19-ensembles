@@ -189,113 +189,110 @@ qra4_loss <- function(df, params, intercepts){
 
 ### QRA2
 
+# asymmetric piecewise linear scoring function
+L <- function(alpha, x, y){
+  return(((x >= y) - alpha)*(x - y))
+}
+
+# Function to minimize for QRA2
+fn <- function(alpha, df, params){
+  #quantile_levels <- sort(unique(df$quantile))
+  params <- data.frame(model=rep(models[-length(models)], each=23), 
+                       quantile=rep(quantile_levels, length(models)-1),
+                       param=params)
+  df_temp <- QRA2(df, params)
+  df_temp <- subset(df_temp, quantile==alpha)
+  L_alpha <- L(alpha, df_temp$value, df_temp$truth)
+  return(mean(L_alpha))
+}
+
 
 # one parameter less, the last one is 1- sum(given params)
 QRA2 <- function(df, params){
   models <- unique(df$model)
   last_param <- models[!(models %in% unique(params$model))]
 
-  print(params %>% 
-          group_by(quantile) %>% 
-          summarize(param=1-sum(param)) %>% 
-          mutate(model=last_param))
   params <- rbind(params, params %>% 
                     group_by(quantile) %>% 
                     summarize(param=1-sum(param)) %>% 
-                    mutate(model=last_param)) 
+                    mutate(model=last_param))
+  
   df_temp <- merge(df, params, by.x = c("model", "quantile"), by.y = c("model", "quantile"))
-  qra3 <- data.frame(
+  qra2 <- data.frame(
     df_temp %>%
       mutate(weighted_values = value * param) %>%
       group_by(target_end_date, location, target, quantile, truth) %>% 
-      summarize(value = sum(weighted_values), .groups="keep"))
-  return(qra3)
+      summarize(value = sum(weighted_values)))
+  return(qra2)
 }
 
 qra2_loss <- function(df, params){
-  quantile_levels <- sort(unique(df$quantile))
-  params <- data.frame(model=rep(models[-length(models)], each=23), 
-                       quantile=rep(quantile_levels, length(models)-1),
-                       param=params)
   df_temp <- QRA2(df, params)
   return(mean_wis(df_temp))
 }
 
 qra2_fit <- function(df){
-  quantile_levels <- sort(unique(df$quantile))
-  n_quantiles <- length(quantile_levels)
   models <- unique(df$model)
-  #models <- models[-length(models)]  # drop last model
-  n_models <- length(models) - 1
+  n_models <- length(models) 
+  quantile_levels <- sort(unique(df$quantile))
   
-  # feasible region: ui %*% theta - ci >= 0
-  r <- c(rep(0, n_models*n_quantiles), rep(-1, n_quantiles))
-  R <- diag(n_models*n_quantiles)
+  # ui %*% theta - ci >= 0  
+  ui <- rbind(diag(n_models-1), rep(-1, n_models-1))
+  ci <- c(rep(0, n_models-1), -1)
   
-  R_l <- matrix(0, nrow=n_quantiles, ncol=n_models*n_quantiles)
-  for (i in 1:n_quantiles){
-    for (j in 1:n_models){
-      R_l[i, i + (j-1)*n_quantiles] <- - 1
-    }
-  }
-  R <- rbind(R, R_l)
-  
-  p_optim <- constrOptim(theta = rep(1/(n_models*n_quantiles), n_models*n_quantiles), 
-                         f = function(x){
-                           return(qra2_loss(df, params = x))},
-                         ui=R, ci=r, method="Nelder-Mead")$par
+  df_params <- data.frame()
+  for (quantile_level in quantile_levels){
+    params <- constrOptim(theta = rep(1/n_models, n_models - 1), 
+                          f = function(x){
+                            return(fn(quantile_level, df, params = x))},
+                          ui=ui, ci=ci, method="Nelder-Mead")$par
     
-  params <- data.frame(model=rep(models, each=23), quantile=rep(quantile_levels, n_models), param=params)
-  
-  return(params)
+    params <- data.frame(model=models[-length(models)], quantile=quantile_level, 
+                         param=params, row.names = NULL)
+    df_params <- bind_rows(df_params, params)
+  }
+  return(df_params)
 }
 
-# rq.fit.fnc 
-# supports linear inequality constraints in the form Rb >= r
-
-
-# 
-# qra2_fit <- function(df){
-#   # quantile_levels <- sort(unique(df$quantile))
-#   # models <- unique(df$model)
-#   # n_models <- length(models)
-#   quantile_levels <- sort(unique(df$quantile))
-#   n_models <- length(unique(df$model))
-#   models <- unique(df$model)
-#   
-#   #for linear inequality constraints: Rb >= r
-#   R = rbind(diag(n_models - 1), rep(-1, n_models - 1))
-#   r = c(rep(0, n_models - 1), -1)
-#   
-#   df_params <- data.frame()
-#   #drop one model # TODO: CHECK THIS, shouldnt be dropped completely?
-#   #df2 <- subset(df, model!=tail(models, 1))
-#   for (quantile_level in quantile_levels){
-#     df_temp <- subset(df, quantile==quantile_level) %>% 
-#       select(c("target_end_date", "location", "truth", "model", "value")) %>% 
-#       spread(model, value) %>% 
-#       drop_na()
-#     
-#     params <- try(rq(truth ~ . - target_end_date - location -1, 
-#                  tau = quantile_level, R=R, r=r, data = df_temp, method="fnc")$coefficients)
-#     # in case of singular design matrix user jitter
-#     if("try-error" %in% class(params)){
-#       params <- rq(jitter(truth) ~ . - target_end_date - location -1, 
-#                        tau = quantile_level, R=R, r=r, data = df_temp, method="fnc")$coefficients
-#     }
-#     
-#     params <- data.frame(model=str_sub(names(params), 2, -2), quantile=quantile_level, 
-#                          param=params, row.names = NULL)
-#     df_params <- bind_rows(df_params, params)
-#   }
-#   
-#   return(df_params)
-# }
-# 
 # qra2_loss <- function(df, params){
+#   quantile_levels <- sort(unique(df$quantile))
+#   params <- data.frame(model=rep(models[-length(models)], each=23), 
+#                        quantile=rep(quantile_levels, length(models)-1),
+#                        param=params)
 #   df_temp <- QRA2(df, params)
 #   return(mean_wis(df_temp))
 # }
+
+
+# qra2_fit <- function(df){
+#   quantile_levels <- sort(unique(df$quantile))
+#   n_quantiles <- length(quantile_levels)
+#   models <- unique(df$model)
+#   #models <- models[-length(models)]  # drop last model
+#   n_models <- length(models) - 1
+#   
+#   # feasible region: ui %*% theta - ci >= 0
+#   r <- c(rep(0, n_models*n_quantiles), rep(-1, n_quantiles))
+#   R <- diag(n_models*n_quantiles)
+#   
+#   R_l <- matrix(0, nrow=n_quantiles, ncol=n_models*n_quantiles)
+#   for (i in 1:n_quantiles){
+#     for (j in 1:n_models){
+#       R_l[i, i + (j-1)*n_quantiles] <- - 1
+#     }
+#   }
+#   R <- rbind(R, R_l)
+#   
+#   p_optim <- constrOptim(theta = rep(1/(n_models*n_quantiles), n_models*n_quantiles), 
+#                          f = function(x){
+#                            return(qra2_loss(df, params = x))},
+#                          ui=R, ci=r, method="Nelder-Mead")$par
+#     
+#   params <- data.frame(model=rep(models, each=23), quantile=rep(quantile_levels, n_models), param=params)
+#   
+#   return(params)
+# }
+
 
 ### GQRA
 

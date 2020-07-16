@@ -94,7 +94,9 @@ groups <- data.frame(quantile=c(g1, g2, g3, g4, g5),
                                       rep("g5", length(g5))))
 
 
-ensembles <- c("EWA", "V2", "V3", "V4", "QRA3", "QRA4", "GQRA2", "GQRA3", "GQRA4")
+ensembles <- c("EWA", "V2", "V3", "V4", "QRA2", "QRA3", "QRA4", "GQRA2", "GQRA3", "GQRA4")
+
+ensembles <- c("QRA2")
 
 window_sizes <- 1:4
 
@@ -113,46 +115,66 @@ evaluate_ensembles <- function(df, test_dates, window_sizes, ensembles){
       
       scores <- numeric()
       
-      print("EWA")
-      scores <- c(scores, ewa_loss(df_test))
-
-      print("V2")
-      p_v2 <- v2_fit(df_train)
-      scores <- c(scores, v2_loss(df_test, p_v2))
+      if("EWA" %in% ensembles){
+        print("EWA")
+        scores <- c(scores, ewa_loss(df_test))
+      }
       
-      print("V3")
-      p_v3 <- v3_fit(df_train)
-      scores <- c(scores, v3_loss(df_test, p_v3))
-
-      print("V4")
-      p_v4 <- v4_fit(df_train)
-      scores <- c(scores, v3_loss(df_test, p_v4$params, p_v4$intercept))
+      if("V2" %in% ensembles){
+        print("V2")
+        p_v2 <- v2_fit(df_train)
+        scores <- c(scores, v2_loss(df_test, p_v2))
+      }
       
-      # print("QRA2")
-      # p_qra2 <- qra2_fit(df_train)
-      # scores <- c(scores, qra2_loss(df_test, p_qra2))
+      if("V3" %in% ensembles){
+        print("V3")
+        p_v3 <- v3_fit(df_train)
+        scores <- c(scores, v3_loss(df_test, p_v3))
+      }
       
-      print("QRA3")
-      p_qra3 <- qra3_fit(df_train)
-      scores <- c(scores, qra3_loss(df_test, p_qra3))
+      if("V4" %in% ensembles){
+        print("V4")
+        p_v4 <- v4_fit(df_train)
+        scores <- c(scores, v3_loss(df_test, p_v4$params, p_v4$intercept))
+      }
       
-      print("QRA4")
-      p_qra4 <- qra4_fit(df_train)
-      scores <- c(scores, qra4_loss(df_test, p_qra4$params, p_qra4$intercepts))
+      if("QRA2" %in% ensembles){
+        print("QRA2")
+        p_qra2 <- qra2_fit(df_train)
+        scores <- c(scores, qra2_loss(df_test, p_qra2))
+      }
       
-      print("GQRA2")
-      p_qra2 <- gqra2_fit(df_train, groups)
-      scores <- c(scores, gqra2_loss(df_test, groups, p_qra2))
+      if("QRA3" %in% ensembles){
+        print("QRA3")
+        p_qra3 <- qra3_fit(df_train)
+        scores <- c(scores, qra3_loss(df_test, p_qra3))
+      }
       
-      print("GQRA3")
-      p_qra3 <- gqra3_fit(df_train, groups)
-      scores <- c(scores, gqra3_loss(df_test, groups, p_qra3))
+      if("QRA4" %in% ensembles){
+        print("QRA4")
+        p_qra4 <- qra4_fit(df_train)
+        scores <- c(scores, qra4_loss(df_test, p_qra4$params, p_qra4$intercepts))
+      }
       
-      print("GQRA4")
-      p_qra4 <- gqra4_fit(df_train, groups)
-      scores <- c(scores, gqra4_loss(df_test, groups, p_qra4$params, p_qra4$intercepts))
+      if("GQRA2" %in% ensembles){
+        print("GQRA2")
+        p_qra2 <- gqra2_fit(df_train, groups)
+        scores <- c(scores, gqra2_loss(df_test, groups, p_qra2))
+      }
       
-      df_temp[nrow(df_temp)+1, ] <- scores
+      if("GQRA3" %in% ensembles){
+        print("GQRA3")
+        p_qra3 <- gqra3_fit(df_train, groups)
+        scores <- c(scores, gqra3_loss(df_test, groups, p_qra3))
+      }
+      
+      if("GQRA4" %in% ensembles){
+        print("GQRA4")
+        p_qra4 <- gqra4_fit(df_train, groups)
+        scores <- c(scores, gqra4_loss(df_test, groups, p_qra4$params, p_qra4$intercepts))
+      }
+      
+      df_temp[nrow(df_temp) + 1, ] <- scores
     }
     
     df_temp$test_date <- test_dates[(window_size+1):length(test_dates)]
@@ -169,11 +191,18 @@ evaluate_ensembles <- function(df, test_dates, window_sizes, ensembles){
 
 results <- evaluate_ensembles(df, test_dates, window_sizes, ensembles)
 
-write.csv(results, "results/results3.csv", row.names=FALSE)
+write.csv(results, "results/results_qra2.csv", row.names=FALSE)
 
 
 results <- read.csv("results.csv")
 View(t(colMeans(results[, 3:8])))
+
+
+
+
+names(results)
+
+
 
 
 
