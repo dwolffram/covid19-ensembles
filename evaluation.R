@@ -194,6 +194,21 @@ results <- evaluate_ensembles(df, test_dates, window_sizes, ensembles)
 write.csv(results, "results/results_qra2.csv", row.names=FALSE)
 
 
+results_qra2 <- results
+
+results = read.csv('results/results3.csv',
+                   colClasses = c(window_size = "factor", test_date = "Date"))
+
+results <- results %>%
+  merge(results_qra2)
+
+results <- results[c("window_size", "test_date", "EWA", "V2", "V3", "V4", "QRA2", "QRA3", "QRA4", "GQRA2", "GQRA3", "GQRA4")]
+
+last_date <- last(sort(unique(results$test_date)))
+
+write.csv(results, paste0("results/results_", last_date, ".csv"), row.names=FALSE)
+write.csv(results, "results/results.csv", row.names=FALSE)
+
 results <- read.csv("results.csv")
 View(t(colMeans(results[, 3:8])))
 

@@ -1,7 +1,7 @@
 setwd("/home/dwolffram/covid19-ensembles")
 library(tidyverse)
 library(dplyr)
-results = read.csv('results/results3.csv',
+results = read.csv('results/results.csv',
                    colClasses = c(window_size = "factor", test_date = "Date"))
 
 results_long <- results %>% 
@@ -41,14 +41,18 @@ ggsave('plots/comp_V2.png', width=24, height=12, dpi=500, unit='cm', device='png
 ggplot(data = results_long, aes(x = model, y = wis)) +
   #facet_wrap(~window_size) +
   geom_boxplot(outlier.shape=NA) +
-  ylim(0, 100)
-ggsave('plots/boxplot.png', width=24, height=12, dpi=500, unit='cm', device='png')
+  ylim(0, 100) +
+  labs(x = "Model",
+       y = "WIS")
+ggsave('plots/boxplot.png', width=24, height=14, dpi=500, unit='cm', device='png')
 
 
 ggplot(data = results_long, aes(x = window_size, y = wis)) +
   facet_wrap(~model) +
   geom_boxplot(outlier.shape=NA) +
-  ylim(0, 100)
+  ylim(0, 100) +
+  labs(x = "Window Size",
+       y = "WIS")
 
 ggsave('plots/boxplot_windowSizes.png', device='png')
 
@@ -137,22 +141,23 @@ bump_chart <- function(windowSize="1", highlight_models=unique(df_rank$model)){
 }
 
 bump_chart()
-bump_chart("4", c("EWA","V3","QRA3", "GQRA3"))
+bump_chart("4", c("EWA","V3","QRA2", "GQRA3"))
 
 bump_chart(1)
-ggsave('plots/bump_chart_ws1.png', width=24, height=12, dpi=500, unit='cm', device='png')
+ggsave('plots/bump_chart_ws1.png', width=24, height=14, dpi=500, unit='cm', device='png')
 bump_chart(2)
-ggsave('plots/bump_chart_ws2.png', width=24, height=12, dpi=500, unit='cm', device='png')
+ggsave('plots/bump_chart_ws2.png', width=24, height=14, dpi=500, unit='cm', device='png')
 bump_chart(3)
-ggsave('plots/bump_chart_ws3.png', width=24, height=12, dpi=500, unit='cm', device='png')
+ggsave('plots/bump_chart_ws3.png', width=24, height=14, dpi=500, unit='cm', device='png')
 bump_chart(4)
-ggsave('plots/bump_chart_ws4.png', width=24, height=12, dpi=500, unit='cm', device='png')
+ggsave('plots/bump_chart_ws4.png', width=24, height=14, dpi=500, unit='cm', device='png')
 
 bump_chart(4, c("EWA","V3","QRA3", "GQRA3"))
 
 bump_chart(4, c("EWA"))
-ggsave('plots/bump_chart_EWA.png', width=24, height=12, dpi=500, unit='cm', device='png')
+ggsave('plots/bump_chart_EWA.png', width=24, height=14, dpi=500, unit='cm', device='png')
 
 
 
+bump_chart(4, c("EWA","V3","QRA3", "GQRA3"))
 
