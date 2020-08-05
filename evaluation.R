@@ -57,6 +57,9 @@ train_test_split <- function(df, test_date, window_size){
 evaluate <- function(df_train, df_test, ensembles){
   scores <- numeric()
   
+  alphas <- c(0.02,0.05,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9)
+  quantile_levels <- sort(c(unique(c(alphas/2, 1-alphas/2)),0.5))
+  
   if("EWA" %in% ensembles){
     print("EWA")
     scores <- c(scores, ewa_loss(df_test))
@@ -228,9 +231,7 @@ evaluate_ensembles <- function(df, dates, window_sizes, ensembles, extendResults
   
   for (window_size in window_sizes){
     print(window_size)
-    #df_temp <- setNames(data.frame(matrix(ncol = length(ensembles) + 2, nrow = 0)), 
-    #                    c(ensembles, "test_date", "window_size"))
-    
+
     # possible test dates for given window size
     test_dates <- as.list(dates[(window_size+1):length(dates)])
     test_dates <- setdiff(test_dates, old_test_dates)
@@ -245,8 +246,8 @@ evaluate_ensembles <- function(df, dates, window_sizes, ensembles, extendResults
       
       c(scores, test_date, window_size)
     }
-    df_temp <- setNames(data.frame(all_scores), c(ensembles, "test_date", "window_size"))
     
+    df_temp <- setNames(data.frame(all_scores), c(ensembles, "test_date", "window_size"))
     df_scores <- bind_rows(df_scores, df_temp)
   }
   
@@ -255,6 +256,7 @@ evaluate_ensembles <- function(df, dates, window_sizes, ensembles, extendResults
   
   df_scores$test_date <- as.Date(df_scores$test_date, origin="1970-01-01")
   
+  # append new results to old results given by extendResults
   df_scores <- bind_rows(extendResults, df_scores)
   
   
@@ -267,6 +269,15 @@ a <- evaluate_ensembles(df, c(as.Date("2020-05-09"), as.Date("2020-05-16"), as.D
 
 a <- evaluate_ensembles(df1, possible_dates, 
                         1:4, c('EWA', 'V3'))
+
+window_sizes <- 1:4
+ensembles <- c("EWA", "V2", "V3", "V4", "QRA2", "QRA3", "QRA4", "GQRA2", "GQRA3", "GQRA4")
+
+results <- evaluate_ensembles(df, possible_dates, window_sizes, ensembles)
+
+write.csv(results, "results/results_parallel.csv", row.names=FALSE)
+
+
 
 # evaluate_ensembles <- function(df, dates, window_sizes, ensembles, extendResults=NULL){
 #   old_test_dates <- unique(extendResults$test_date)
