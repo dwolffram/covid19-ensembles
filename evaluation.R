@@ -1,14 +1,12 @@
 setwd("/home/dwolffram/covid19-ensembles")
 
-#library(quantreg)
-
 source("functions.R")
 source("ensemble_methods.R")
 
 
 # all_models <- list.dirs(path = "data-processed/", full.names = FALSE, recursive = FALSE)
 
-models <- c("LANL-GrowthRate", "MIT_CovidAnalytics-DELPHI", "MOBS_NEU-GLEAM_COVID", 
+models <- c("LANL-GrowthRate", "CovidAnalytics-DELPHI", "MOBS-GLEAM_COVID", 
             "YYG-ParamSearch", "UCLA-SuEIR")
 
 exclude_locations <- c("11", "66", "69", "72", "78")
@@ -16,46 +14,24 @@ exclude_locations <- c("11", "66", "69", "72", "78")
 
 df <- load_df(models=models, exclude_locations=exclude_locations)
 
-df <- df %>% 
-  filter(target == "1 wk ahead cum death")
 
-
-df %>%
-  group_by(target_end_date) %>%
+# not all targets are always available
+available_targets <- df %>%
+  group_by(target_end_date, target) %>%
   summarize(model_count = length(unique(model)))
 
-df %>%
-  group_by(target_end_date) %>%
-  summarize(model_count = length(unique(model))) %>%
-  filter(model_count >= 5)
-
-# target_end_dates with all 5 model predictions
+# dates where all models are available for "1 wk ahead cum death"
 possible_dates <- df %>%
-  group_by(target_end_date) %>%
+  group_by(target_end_date, target) %>%
   summarize(model_count = length(unique(model))) %>%
-  filter(model_count >= 5) %>% 
+  filter(target == "1 wk ahead cum death") %>%
+  filter(model_count == length(models)) %>%
   pull(target_end_date)
 
-# not all targets are always available...
-available_targets <- subset(df, target_end_date %in% possible_dates) %>%
-  group_by(target_end_date, target) %>%
-  summarize(model_count = length(unique(model)))
-
-subset(df, target_end_date %in% possible_dates) %>%
-  group_by(target_end_date, target) %>%
-  summarize(model_count = length(unique(model))) %>%   
-  filter(model_count >= 5)
-
-
-
-#"2020-05-09" "2020-05-16" "2020-05-23" "2020-05-30" "2020-06-06" "2020-06-13" "2020-06-20"
-
-#test_dates <- possible_dates[5:length(possible_dates)]
-test_dates <- possible_dates
-
-
-#window_size = 4
-#train_start = test_dates - window_size*7
+# only consider 1 week ahead forecasts and only the dates with all models available
+df <- df %>% 
+  filter(target == "1 wk ahead cum death") %>%
+  filter(target_end_date %in% possible_dates)
 
 
 train_test_split <- function(df, test_date, window_size){
@@ -65,128 +41,143 @@ train_test_split <- function(df, test_date, window_size){
   return(list(df_train=df_train, df_test=df_test))
 }
 
-for(window_size in window_sizes){
-  print(window_size)
-  df_temp <- setNames(data.frame(matrix(ncol = length(ensembles), nrow = 0)), ensembles)
+# for(window_size in window_sizes){
+#   print(window_size)
+#   df_temp <- setNames(data.frame(matrix(ncol = length(ensembles), nrow = 0)), ensembles)
+#   
+#   for(test_date in as.list(test_dates[(window_size+1):length(test_dates)])){
+#     print(as.character(test_date))
+#     dfs <- train_test_split(df, test_date, window_size)
+#     df_train <- dfs$df_train
+#     df_test <- dfs$df_test
+#   }
+# }
+
+
+evaluate <- function(df_train, df_test, ensembles){
+  scores <- numeric()
   
-  for(test_date in as.list(test_dates[(window_size+1):length(test_dates)])){
-    print(as.character(test_date))
-    dfs <- train_test_split(df, test_date, window_size)
-    df_train <- dfs$df_train
-    df_test <- dfs$df_test
+  if("EWA" %in% ensembles){
+    print("EWA")
+    scores <- c(scores, ewa_loss(df_test))
   }
+  
+  if("V2" %in% ensembles){
+    print("V2")
+    p_v2 <- v2_fit(df_train)
+    scores <- c(scores, v2_loss(df_test, p_v2))
+  }
+  
+  if("V3" %in% ensembles){
+    print("V3")
+    p_v3 <- v3_fit(df_train)
+    scores <- c(scores, v3_loss(df_test, p_v3))
+  }
+  
+  if("V4" %in% ensembles){
+    print("V4")
+    p_v4 <- v4_fit(df_train)
+    scores <- c(scores, v3_loss(df_test, p_v4$params, p_v4$intercept))
+  }
+  
+  if("QRA2" %in% ensembles){
+    print("QRA2")
+    p_qra2 <- qra2_fit(df_train)
+    scores <- c(scores, qra2_loss(df_test, p_qra2))
+  }
+  
+  if("QRA3" %in% ensembles){
+    print("QRA3")
+    p_qra3 <- qra3_fit(df_train)
+    scores <- c(scores, qra3_loss(df_test, p_qra3))
+  }
+  
+  if("QRA4" %in% ensembles){
+    print("QRA4")
+    p_qra4 <- qra4_fit(df_train)
+    scores <- c(scores, qra4_loss(df_test, p_qra4$params, p_qra4$intercepts))
+  }
+  
+  if("GQRA2" %in% ensembles){
+    print("GQRA2")
+    groups <- get_quantile_groups()
+    p_qra2 <- gqra2_fit(df_train, groups)
+    scores <- c(scores, gqra2_loss(df_test, groups, p_qra2))
+  }
+  
+  if("GQRA3" %in% ensembles){
+    print("GQRA3")
+    groups <- get_quantile_groups()
+    p_qra3 <- gqra3_fit(df_train, groups)
+    scores <- c(scores, gqra3_loss(df_test, groups, p_qra3))
+  }
+  
+  if("GQRA4" %in% ensembles){
+    print("GQRA4")
+    groups <- get_quantile_groups()
+    p_qra4 <- gqra4_fit(df_train, groups)
+    scores <- c(scores, gqra4_loss(df_test, groups, p_qra4$params, p_qra4$intercepts))
+  }
+  
+  return(scores)
 }
 
 
-for(test_date in as.list(test_dates)){
-  print(test_date)
-}
-
-g1 <- c(0.01, 0.025, 0.05, 0.1)
-g2 <- c(0.15, 0.2, 0.25, 0.3)
-g3 <- c(0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65)
-g4 <- c(0.7, 0.75, 0.8, 0.85)
-g5 <- c(0.9, 0.95, 0.975, 0.99)
-
-groups <- data.frame(quantile=c(g1, g2, g3, g4, g5), 
-                     quantile_group=c(rep("g1", length(g1)), rep("g2", length(g2)), 
-                                      rep("g3", length(g3)), rep("g4", length(g4)), 
-                                      rep("g5", length(g5))))
-
-
-ensembles <- c("EWA", "V2", "V3", "V4", "QRA2", "QRA3", "QRA4", "GQRA2", "GQRA3", "GQRA4")
-
-ensembles <- c("QRA2")
-
-window_sizes <- 1:4
-
-evaluate_ensembles <- function(df, test_dates, window_sizes, ensembles){
+evaluate_ensembles <- function(df, dates, window_sizes, ensembles, extendResults=NULL){
+  old_test_dates <- unique(extendResults$test_date)
+  
   df_scores <- data.frame()
   
   for(window_size in window_sizes){
     print(window_size)
-    df_temp <- setNames(data.frame(matrix(ncol = length(ensembles), nrow = 0)), ensembles)
+    df_temp <- setNames(data.frame(matrix(ncol = length(ensembles) + 2, nrow = 0)), 
+                        c(ensembles, "test_date", "window_size"))
     
-    for(test_date in as.list(test_dates[(window_size+1):length(test_dates)])){
+    # possible test dates for given window size
+    test_dates <- as.list(dates[(window_size+1):length(dates)])
+    test_dates <- setdiff(test_dates, old_test_dates)
+    
+    for(test_date in test_dates){
       print(as.character(test_date))
       dfs <- train_test_split(df, test_date, window_size)
       df_train <- dfs$df_train
       df_test <- dfs$df_test
       
-      scores <- numeric()
+      scores <- evaluate(df_train, df_test, ensembles)
       
-      if("EWA" %in% ensembles){
-        print("EWA")
-        scores <- c(scores, ewa_loss(df_test))
-      }
+      df_temp[nrow(df_temp) + 1, ] <- c(scores, test_date, window_size)
       
-      if("V2" %in% ensembles){
-        print("V2")
-        p_v2 <- v2_fit(df_train)
-        scores <- c(scores, v2_loss(df_test, p_v2))
-      }
-      
-      if("V3" %in% ensembles){
-        print("V3")
-        p_v3 <- v3_fit(df_train)
-        scores <- c(scores, v3_loss(df_test, p_v3))
-      }
-      
-      if("V4" %in% ensembles){
-        print("V4")
-        p_v4 <- v4_fit(df_train)
-        scores <- c(scores, v3_loss(df_test, p_v4$params, p_v4$intercept))
-      }
-      
-      if("QRA2" %in% ensembles){
-        print("QRA2")
-        p_qra2 <- qra2_fit(df_train)
-        scores <- c(scores, qra2_loss(df_test, p_qra2))
-      }
-      
-      if("QRA3" %in% ensembles){
-        print("QRA3")
-        p_qra3 <- qra3_fit(df_train)
-        scores <- c(scores, qra3_loss(df_test, p_qra3))
-      }
-      
-      if("QRA4" %in% ensembles){
-        print("QRA4")
-        p_qra4 <- qra4_fit(df_train)
-        scores <- c(scores, qra4_loss(df_test, p_qra4$params, p_qra4$intercepts))
-      }
-      
-      if("GQRA2" %in% ensembles){
-        print("GQRA2")
-        p_qra2 <- gqra2_fit(df_train, groups)
-        scores <- c(scores, gqra2_loss(df_test, groups, p_qra2))
-      }
-      
-      if("GQRA3" %in% ensembles){
-        print("GQRA3")
-        p_qra3 <- gqra3_fit(df_train, groups)
-        scores <- c(scores, gqra3_loss(df_test, groups, p_qra3))
-      }
-      
-      if("GQRA4" %in% ensembles){
-        print("GQRA4")
-        p_qra4 <- gqra4_fit(df_train, groups)
-        scores <- c(scores, gqra4_loss(df_test, groups, p_qra4$params, p_qra4$intercepts))
-      }
-      
-      df_temp[nrow(df_temp) + 1, ] <- scores
     }
     
-    df_temp$test_date <- test_dates[(window_size+1):length(test_dates)]
-    df_temp$window_size <- window_size
     df_scores <- bind_rows(df_scores, df_temp)
+    
   }
   
   df_scores <- df_scores %>% 
     select(window_size, test_date, everything())
   
+  df_scores$test_date <- as.Date(df_scores$test_date, origin="1970-01-01")
+  
+  df_scores <- bind_rows(extendResults, df_scores)
+  
+  
   return(df_scores)
 }
+
+a <- evaluate_ensembles(df, c(as.Date("2020-05-09"), as.Date("2020-05-16"), as.Date("2020-05-23"),
+                               as.Date("2020-05-30")), 
+                        c(1, 2), c('EWA'))
+
+a <- evaluate_ensembles(df, c(as.Date("2020-05-09"), as.Date("2020-05-16"), as.Date("2020-05-23")), 
+                        c(1), c('EWA', 'V3'))
+
+b <- evaluate_ensembles(df, c(as.Date("2020-05-09"), as.Date("2020-05-16"), as.Date("2020-05-23"),
+                               as.Date("2020-05-30")), 
+                        c(1), c('EWA', 'V3'), extendResults = a)
+
+
+window_sizes <- 1:4
+ensembles <- c("EWA", "V2", "V3", "V4", "QRA2", "QRA3", "QRA4", "GQRA2", "GQRA3", "GQRA4")
 
 
 results <- evaluate_ensembles(df, test_dates, window_sizes, ensembles)
@@ -214,43 +205,106 @@ View(t(colMeans(results[, 3:8])))
 
 
 
-
-names(results)
-
-
+results = read.csv('results/results.csv',
+                   colClasses = c(window_size = "factor", test_date = "Date"))
 
 
 
-a <- train_test_split(df, as.Date("2020-06-06"), 2)
-a_train <- a$df_train
-a_test <- a$df_test
 
 
-quantile_levels <- sort(unique(a_train$quantile))
-n_models <- length(unique(a_train$model))
-models <- unique(a_train$model)
-
-#for linear inequality constraints: Rb >= r
-R = rbind(diag(n_models - 1), rep(-1, n_models - 1))
-r = c(rep(0, n_models - 1), -1)
-
-df_params <- data.frame()
-#drop one model
-df2 <- subset(a_train, model!=tail(models, 1))
-df_temp <- subset(df2, quantile==0.5) %>% 
-  select(c("target_end_date", "location", "truth", "model", "value")) %>% 
-  spread(model, value) %>% 
-  drop_na()
-
-params <- rq(truth ~ . - target_end_date - location -1, 
-           tau = 0.65, R=R, r=r, data = df_temp, method="fnc")$coefficients
-
-params <- data.frame(model=str_sub(names(params), 2, -2), quantile=0.01, 
-                   param=params, row.names = NULL)
-df_params <- bind_rows(df_params, params)
-
-jitter(df_temp)
+library(doParallel)
+no_cores <- detectCores() - 1  
+no_cores <- 32
+registerDoParallel(cores=no_cores)  
+#cl <- makeCluster(no_cores, type="FORK")  
+#stopCluster(cl) 
 
 
-p_qra2 <- qra2_fit(a_train)
-scores <- c(scores, qra2_loss(df_test, p_qra2))
+
+evaluate_ensembles <- function(df, dates, window_sizes, ensembles, extendResults=NULL){
+  old_test_dates <- unique(extendResults$test_date)
+  
+  df_scores <- data.frame()
+  
+  for (window_size in window_sizes){
+    print(window_size)
+    #df_temp <- setNames(data.frame(matrix(ncol = length(ensembles) + 2, nrow = 0)), 
+    #                    c(ensembles, "test_date", "window_size"))
+    
+    # possible test dates for given window size
+    test_dates <- as.list(dates[(window_size+1):length(dates)])
+    test_dates <- setdiff(test_dates, old_test_dates)
+    
+    all_scores <- foreach(test_date=test_dates, .combine=rbind) %dopar% {
+      print(as.character(test_date))
+      dfs <- train_test_split(df, test_date, window_size)
+      df_train <- dfs$df_train
+      df_test <- dfs$df_test
+      
+      scores <- evaluate(df_train, df_test, ensembles)
+      
+      c(scores, test_date, window_size)
+    }
+    df_temp <- setNames(data.frame(all_scores), c(ensembles, "test_date", "window_size"))
+    
+    df_scores <- bind_rows(df_scores, df_temp)
+  }
+  
+  df_scores <- df_scores %>% 
+    select(window_size, test_date, everything())
+  
+  df_scores$test_date <- as.Date(df_scores$test_date, origin="1970-01-01")
+  
+  df_scores <- bind_rows(extendResults, df_scores)
+  
+  
+  return(df_scores)
+}
+
+a <- evaluate_ensembles(df, c(as.Date("2020-05-09"), as.Date("2020-05-16"), as.Date("2020-05-23"),
+                               as.Date("2020-05-30")), 
+                        c(1, 2), c('EWA'))
+
+a <- evaluate_ensembles(df1, possible_dates, 
+                        1:4, c('EWA', 'V3'))
+
+# evaluate_ensembles <- function(df, dates, window_sizes, ensembles, extendResults=NULL){
+#   old_test_dates <- unique(extendResults$test_date)
+#   
+#   df_scores <- data.frame()
+#   
+#   df_scores <- foreach(window_size=window_sizes, .combine=rbind) %dopar% {
+#     print(window_size)
+#     df_temp <- setNames(data.frame(matrix(ncol = length(ensembles) + 2, nrow = 0)), 
+#                         c(ensembles, "test_date", "window_size"))
+#     
+#     # possible test dates for given window size
+#     test_dates <- as.list(dates[(window_size+1):length(dates)])
+#     test_dates <- setdiff(test_dates, old_test_dates)
+#     
+#     all_scores <- foreach(test_date=test_dates, .combine=rbind) %dopar% {
+#       print(as.character(test_date))
+#       dfs <- train_test_split(df, test_date, window_size)
+#       df_train <- dfs$df_train
+#       df_test <- dfs$df_test
+#       
+#       scores <- evaluate(df_train, df_test, ensembles)
+#       
+#       c(scores, test_date, window_size)
+#     }
+#     df_temp <- bind_rows(df_temp, all_scores)
+#     
+#     #df_scores <- bind_rows(df_scores, df_temp)
+#     df_temp
+#   }
+#   
+#   df_scores <- df_scores %>% 
+#     select(window_size, test_date, everything())
+#   
+#   df_scores$test_date <- as.Date(df_scores$test_date, origin="1970-01-01")
+#   
+#   df_scores <- bind_rows(extendResults, df_scores)
+#   
+#   
+#   return(df_scores)
+# }

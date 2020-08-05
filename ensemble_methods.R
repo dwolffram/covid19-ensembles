@@ -296,6 +296,20 @@ qra2_fit <- function(df){
 
 ### GQRA
 
+get_quantile_groups <- function(){
+  g1 <- c(0.01, 0.025, 0.05, 0.1)
+  g2 <- c(0.15, 0.2, 0.25, 0.3)
+  g3 <- c(0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65)
+  g4 <- c(0.7, 0.75, 0.8, 0.85)
+  g5 <- c(0.9, 0.95, 0.975, 0.99)
+  
+  groups <- data.frame(quantile=c(g1, g2, g3, g4, g5), 
+                       quantile_group=c(rep("g1", length(g1)), rep("g2", length(g2)), 
+                                        rep("g3", length(g3)), rep("g4", length(g4)), 
+                                        rep("g5", length(g5))))
+  return(groups)
+}
+
 g1 <- c(0.01, 0.025, 0.05, 0.1)
 g2 <- c(0.15, 0.2, 0.25, 0.3)
 g3 <- c(0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65)
