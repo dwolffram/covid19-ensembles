@@ -1,7 +1,7 @@
 setwd("/home/dwolffram/covid19-ensembles")
 library(tidyverse)
 library(dplyr)
-results = read.csv('results/results.csv',
+results = read.csv('results/results_parallel.csv',
                    colClasses = c(window_size = "factor", test_date = "Date"))
 
 results_long <- results %>% 

@@ -6,7 +6,7 @@ source("ensemble_methods.R")
 library(quantreg)
 
 
-models <- c("LANL-GrowthRate", "MIT_CovidAnalytics-DELPHI", "MOBS_NEU-GLEAM_COVID", 
+models <- c("LANL-GrowthRate", "CovidAnalytics-DELPHI", "MOBS-GLEAM_COVID", 
             "YYG-ParamSearch", "UCLA-SuEIR")
 
 exclude_locations <- c("11", "66", "69", "72", "78")
@@ -14,20 +14,30 @@ exclude_locations <- c("11", "66", "69", "72", "78")
 
 df <- load_df(models=models, exclude_locations=exclude_locations)
 
-df <- df %>% 
-  filter(target == "1 wk ahead cum death")
 
-# target_end_dates with all 5 model predictions
+# not all targets are always available
+available_targets <- df %>%
+  group_by(target_end_date, target) %>%
+  summarize(model_count = length(unique(model)))
+
+# dates where all models are available for "1 wk ahead cum death"
 possible_dates <- df %>%
-  group_by(target_end_date) %>%
+  group_by(target_end_date, target) %>%
   summarize(model_count = length(unique(model))) %>%
-  filter(model_count >= 5) %>% 
+  filter(target == "1 wk ahead cum death") %>%
+  filter(model_count == length(models)) %>%
   pull(target_end_date)
 
+# only consider 1 week ahead forecasts and only the dates with all models available
+df <- df %>% 
+  filter(target == "1 wk ahead cum death") %>%
+  filter(target_end_date %in% possible_dates)
 
-test_dates <- possible_dates[4:6]
 
-window_size = 3
+
+test_dates <- possible_dates[4:8]
+
+window_size = 4
 train_start = test_dates - window_size*7
 
 df_test = subset(df, target_end_date == test_dates[1])
@@ -40,8 +50,27 @@ ewa_df <- EWA(df_test)
 ewa_scores <- wis_table(ewa_df)
 mean(ewa_scores$wis)
 mean_wis(ewa_df)
+wis_decomposition((ewa_df))
 
 ewa_loss(df_test)
+
+### MED
+med_df <- MED(df_test)
+mean_wis(med_df)
+
+med_scores <- wis_table(med_df)
+wis_decomposition((med_df))
+
+med_loss(df_test)
+
+#colMeans(med_scores[c("wgt_iw", "wgt_pen_u", "wgt_pen_l", "wis")])
+
+for (e in c(EWA, MED)){
+  print(deparse(quote(e)))
+  a <- e(df_test)
+  print(mean_wis(a))
+}
+
 
 ### V3
 v3_df <- V3(df_test, params=rep(0.2, 5))
@@ -58,7 +87,7 @@ v3_loss(df_test, p_v3)
 
 ### V4
 # Set an intercept in V3
-v4_df <- V3(df_test, params=rep(0.2, 5), intercept=2)
+v4_df <- V3(df_test, params=rep(0.2, 5), intercept=0)
 mean_wis(v4_df)
 v3_loss(df_test, rep(0.2, 5), intercept=2)
 

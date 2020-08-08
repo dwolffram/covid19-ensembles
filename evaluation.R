@@ -65,6 +65,11 @@ evaluate <- function(df_train, df_test, ensembles){
     scores <- c(scores, ewa_loss(df_test))
   }
   
+  if ("MED" %in% ensembles){
+    print("MED")
+    scores <- c(scores, ewa_loss(df_test))
+  }
+  
   if("V2" %in% ensembles){
     print("V2")
     p_v2 <- v2_fit(df_train)
@@ -167,6 +172,12 @@ evaluate_ensembles <- function(df, dates, window_sizes, ensembles, extendResults
   return(df_scores)
 }
 
+
+ensembles <- c("EWA", "MED", "V2", "V3", "V4", "QRA2", "QRA3", "QRA4", "GQRA2", "GQRA3", "GQRA4")
+decomp <- c("wgt_iw", "wgt_pen_u", "wgt_pen_l", "wis")
+
+result_cols <- paste(rep(ensembles, each = length(decomp)), decomp, sep = "_")
+
 a <- evaluate_ensembles(df, c(as.Date("2020-05-09"), as.Date("2020-05-16"), as.Date("2020-05-23"),
                                as.Date("2020-05-30")), 
                         c(1, 2), c('EWA'))
@@ -217,7 +228,7 @@ results = read.csv('results/results.csv',
 
 library(doParallel)
 no_cores <- detectCores() - 1  
-no_cores <- 32
+no_cores <- 16
 registerDoParallel(cores=no_cores)  
 #cl <- makeCluster(no_cores, type="FORK")  
 #stopCluster(cl) 
@@ -319,3 +330,178 @@ write.csv(results, "results/results_parallel.csv", row.names=FALSE)
 #   
 #   return(df_scores)
 # }
+
+df_test
+EWA(df_test)
+
+### NEW APPROACH
+ensembles <- c("EWA", "MED")
+df_scores <- data.frame()
+for (ensemble in ensembles){
+  print(ensemble)
+  df_forecast <- do.call(ensemble, args=list(df=df_test))
+  scores <- wis_table(df_forecast)
+  scores$method <- ensemble
+  df_scores <- bind_rows(df_scores, scores)
+}
+
+evaluate <- function(df_train, df_test, ensembles){
+  scores_temp <- data.frame()
+  
+  alphas <- c(0.02,0.05,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9)
+  quantile_levels <- sort(c(unique(c(alphas/2, 1-alphas/2)),0.5))
+  
+  if("EWA" %in% ensembles){
+    print("EWA")
+    df_forecast <- EWA(df_test)
+    scores <- wis_table(df_forecast)
+    scores$method <- "EWA"
+    scores_temp <- bind_rows(scores_temp, scores)
+  }
+  
+  if ("MED" %in% ensembles){
+    print("MED")
+    df_forecast <- MED(df_test)
+    scores <- wis_table(df_forecast)
+    scores$method <- "MED"
+    scores_temp <- bind_rows(scores_temp, scores)
+  }
+  
+  if("V2" %in% ensembles){
+    print("V2")
+    p <- v2_fit(df_train)
+    df_forecast <- V2(df_test, params=p)
+    scores <- wis_table(df_forecast)
+    scores$method <- "V2"
+    scores_temp <- bind_rows(scores_temp, scores)
+  }
+  
+  if("V3" %in% ensembles){
+    print("V3")
+    p <- v3_fit(df_train)
+    df_forecast <- V3(df_test, params=p)
+    scores <- wis_table(df_forecast)
+    scores$method <- "V3"
+    scores_temp <- bind_rows(scores_temp, scores)  
+  }
+  
+  if("V4" %in% ensembles){
+    print("V4")
+    p <- v4_fit(df_train)
+    df_forecast <- V3(df_test, p$params, p$intercept)
+    scores <- wis_table(df_forecast)
+    scores$method <- "V4"
+    scores_temp <- bind_rows(scores_temp, scores)  
+  }
+  
+  if("QRA2" %in% ensembles){
+    print("QRA2")
+    p <- qra2_fit(df_train)
+    df_forecast <- QRA2(df_test, params=p)
+    scores <- wis_table(df_forecast)
+    scores$method <- "QRA2"
+    scores_temp <- bind_rows(scores_temp, scores)  }
+  
+  if("QRA3" %in% ensembles){
+    print("QRA3")
+    p <- qra3_fit(df_train)
+    df_forecast <- QRA3(df_test, params=p)
+    scores <- wis_table(df_forecast)
+    scores$method <- "QRA3"
+    scores_temp <- bind_rows(scores_temp, scores)
+  }
+  
+  if("QRA4" %in% ensembles){
+    print("QRA4")
+    p <- qra4_fit(df_train)
+    df_forecast <- QRA4(df_test,p$params, p$intercepts)
+    scores <- wis_table(df_forecast)
+    scores$method <- "QRA4"
+    scores_temp <- bind_rows(scores_temp, scores)
+  }
+  
+  if("GQRA2" %in% ensembles){
+    print("GQRA2")
+    groups <- get_quantile_groups()
+    p <- gqra2_fit(df_train, groups)
+    df_forecast <- GQRA_2(df_test, groups, p)
+    scores <- wis_table(df_forecast)
+    scores$method <- "GQRA2"
+    scores_temp <- bind_rows(scores_temp, scores)
+  }
+  
+  if("GQRA3" %in% ensembles){
+    print("GQRA3")
+    groups <- get_quantile_groups()
+    p <- gqra3_fit(df_train, groups)
+    df_forecast <- GQRA_3(df_test, groups, p)
+    scores <- wis_table(df_forecast)
+    scores$method <- "GQRA3"
+    scores_temp <- bind_rows(scores_temp, scores)
+  }
+  
+  if("GQRA4" %in% ensembles){
+    print("GQRA4")
+    groups <- get_quantile_groups()
+    p <- gqra4_fit(df_train, groups)
+    df_forecast <- GQRA_4(df_test, groups, p$params, p$intercepts)
+    scores <- wis_table(df_forecast)
+    scores$method <- "GQRA4"
+    scores_temp <- bind_rows(scores_temp, scores)
+  }
+  
+  return(scores_temp)
+}
+
+
+evaluate_ensembles <- function(df, dates, window_sizes, ensembles, extendResults=NULL){
+  old_test_dates <- unique(extendResults$target_end_date)
+  
+  df_scores <- data.frame()
+  
+  for (window_size in window_sizes){
+    print(paste0("Compute scores for window size ", window_size, "."))
+    
+    # possible test dates for given window size
+    if (window_size >= length(dates)){
+      print("Not enough dates for given window size.")
+      next
+    }
+    test_dates <- as.list(dates[(window_size+1):length(dates)])
+    test_dates <- setdiff(test_dates, old_test_dates)
+    
+    all_scores <- foreach(test_date=test_dates, .combine=rbind) %dopar% {
+      print(as.character(test_date))
+      dfs <- train_test_split(df, test_date, window_size)
+      df_train <- dfs$df_train
+      df_test <- dfs$df_test
+      
+      scores <- evaluate(df_train, df_test, ensembles)
+      scores$window_size <- window_size
+      scores
+    }
+    
+    df_scores <- bind_rows(df_scores, all_scores)
+  }
+  
+  # append new results to old results given by extendResults
+  df_scores <- bind_rows(extendResults, df_scores)
+  
+  
+  return(df_scores)
+}
+a <- evaluate_ensembles(df, c(as.Date("2020-05-09"), as.Date("2020-05-16")), 
+                        c(1, 2), c('EWA', 'MED'))
+
+a <- evaluate_ensembles(df, c(as.Date("2020-05-09"), as.Date("2020-05-16"), as.Date("2020-05-23"),
+                              as.Date("2020-05-30")), 
+                        c(1), c('EWA', 'QRA2'))
+
+ensembles <- c("EWA", "MED", "V2", "V3", "V4", "QRA2", "QRA3", "QRA4", "GQRA2", "GQRA3", "GQRA4")
+a <- evaluate_ensembles(df, c(as.Date("2020-05-09"), as.Date("2020-05-16"), as.Date("2020-05-23"),
+                              as.Date("2020-05-30")), 
+                        c(1, 2), ensembles)
+
+dates <- c(as.Date("2020-05-09"), as.Date("2020-05-16"))
+test_dates <- as.list(dates[(window_size+1):length(dates)])
+
