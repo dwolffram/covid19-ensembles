@@ -210,7 +210,7 @@ L <- function(alpha, x, y){
 
 # Function to minimize for QRA2
 fn <- function(alpha, df, params){
-  #quantile_levels <- sort(unique(df$quantile))
+  quantile_levels <- sort(unique(df$quantile))
   params <- data.frame(model=rep(models[-length(models)], each=23), 
                        quantile=rep(quantile_levels, length(models)-1),
                        param=params)
@@ -309,6 +309,11 @@ qra2_fit <- function(df){
 
 
 ### GQRA
+get_quantile_levels <- function(){
+  alphas <- c(0.02,0.05,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9)
+  quantile_levels <- sort(c(unique(c(alphas/2, 1-alphas/2)),0.5))
+  return(quantile_levels)
+}
 
 get_quantile_groups <- function(){
   g1 <- c(0.01, 0.025, 0.05, 0.1)
@@ -335,7 +340,7 @@ groups <- data.frame(quantile=c(g1, g2, g3, g4, g5),
                                       rep("g3", length(g3)), rep("g4", length(g4)), 
                                       rep("g5", length(g5))))
 
-# params: data.frame with columns model, quantile_group, param
+# params: data.frame with columns: model, quantile_group, param
 GQRA_3 <- function(df, groups, params){
   df_temp <- merge(df, groups, by.x = c("quantile"), by.y = c("quantile"))
   df_temp <- merge(df_temp, params, by.x = c("model", "quantile_group"), 
@@ -348,21 +353,35 @@ GQRA_3 <- function(df, groups, params){
   return(gqra3)
 }
 
-gqra3_loss <- function(df, groups, params){
-  params <- data.frame(model=rep(unique(df$model), each=5), 
-                       quantile_group=rep(unique(groups$quantile_group), 5), 
+# transform a long params vector in a df of required shape
+gqra3_transform_params <- function(df, groups, params){
+  models <- unique(df$model)
+  n_models <- length(models)
+  group_names <- unique(groups$quantile_group)
+  n_groups <- length(group_names)
+  
+  params <- data.frame(model=rep(models, each=n_groups), 
+                       quantile_group=rep(group_names, n_models), 
                        param=params)
+  return(params)
+}
+
+gqra3_loss <- function(df, groups, params){
   df_temp <- GQRA_3(df, groups, params)
   return(mean_wis(df_temp))
 }
 
-gqra3_fit <- function(df, groups, method="BFGS"){
+gqra3_fit <- function(df, groups, method = "BFGS"){
   n_models = length(unique(df$model))
   n_groups = length(unique(groups$quantile_group))
   
-  p_optim <- optim(par = rep(1/(n_models*n_groups), n_models*n_groups), fn = function(x){
-    return(gqra3_loss(df, groups, params = x))}, method=method)$par
+  p_optim <- optim(par = rep(1/(n_models*n_groups), n_models*n_groups), 
+                   fn = function(x){
+                     p <- gqra3_transform_params(df, groups, x)
+                     return(gqra3_loss(df, groups, params = p))}, 
+                   method=method)$par
   
+  p_optim <- gqra3_transform_params(df, groups, p_optim)
   return(p_optim)
 }
 
@@ -383,12 +402,22 @@ GQRA_4 <- function(df, groups, params, intercepts){
   return(gqra4)
 }
 
-gqra4_loss <- function(df, groups, params, intercepts){
-  params <- data.frame(model = rep(models, each=5), 
-                       quantile_group = rep(c("g1", "g2", "g3", "g4", "g5"), 5), 
+gqra4_transform_params <- function(df, groups, params, intercepts){
+  models <- unique(df$model)
+  n_models <- length(models)
+  group_names <- unique(groups$quantile_group)
+  n_groups <- length(group_names)
+  
+  params <- data.frame(model = rep(models, each = n_groups), 
+                       quantile_group = rep(group_names, n_models), 
                        param = params)
-  intercepts <- data.frame(quantile_group = c("g1", "g2", "g3", "g4", "g5"), 
-                       intercept = intercepts)
+  
+  intercepts <- data.frame(quantile_group = group_names, 
+                           intercept = intercepts)
+  return(list(params=params, intercepts=intercepts))
+}
+
+gqra4_loss <- function(df, groups, params, intercepts){
   df_temp <- GQRA_4(df, groups, params, intercepts)
   return(mean_wis(df_temp))
 }
@@ -398,44 +427,54 @@ gqra4_fit <- function(df, groups, method="BFGS"){
   n_groups = length(unique(groups$quantile_group))
   
   # the first n_groups entries are the values of the intercepts
-  p_optim <- optim(par = c(rep(0, n_groups), rep(1/(n_models*n_groups), n_models*n_groups)), 
+  p_optim <- optim(par = c(rep(0, n_groups), 
+                           rep(1/(n_models*n_groups), n_models*n_groups)), 
                    fn = function(x){
-                     return(gqra4_loss(df, groups, params = x[(n_groups+1):length(x)], 
-                                       intercepts = x[1:n_groups]))},
+                     # transform vector to required format
+                     temp <- gqra4_transform_params(df, groups,
+                                                    params = x[(n_groups+1):length(x)], 
+                                                    intercepts = x[1:n_groups])
+                     return(gqra4_loss(df, groups, params = temp$params, 
+                                       intercepts = temp$intercepts))},
                    method = method)$par
+  
   intercepts <- p_optim[1 : n_groups]
-  p_optim <- p_optim[(n_groups+1) : length(p_optim)]
-  return(list(params=p_optim, intercepts=intercepts))
+  params <- p_optim[(n_groups+1) : length(p_optim)]
+  temp <- gqra4_transform_params(df, groups, params, intercepts)
+  return(temp)
 }
 
 
 ### GQRA_2
 
-GQRA_2 <- function(df, groups, params){
-  models <- unique(df$model) 
-  # missing model
-  last_param <- models[!(models %in% unique(params$model))] 
-  # infer parameters for each quantile group from given parameters 1-sum(given params)
-  params <- rbind(params, params %>% 
-                    group_by(quantile_group) %>% 
-                    summarize(param=1-sum(param)) %>% 
-                    mutate(model=last_param)) 
-  
-  df_temp <- merge(df, groups, by.x = c("quantile"), by.y = c("quantile"))
-  df_temp <- merge(df_temp, params, by.x = c("model", "quantile_group"), 
-                   by.y = c("model", "quantile_group")) 
-  
-  gqra2 <- data.frame(
-    df_temp %>%
-      mutate(weighted_values = value * param) %>%
-      group_by(target_end_date, location, target, quantile, truth) %>% 
-      summarize(value = sum(weighted_values)))
-  return(gqra2)
+# GQRA_2 <- function(df, groups, params){
+#   models <- unique(df$model) 
+#   # missing model
+#   last_param <- models[!(models %in% unique(params$model))] 
+#   # infer parameters for each quantile group from given parameters 1-sum(given params)
+#   params <- rbind(params, params %>% 
+#                     group_by(quantile_group) %>% 
+#                     summarize(param=1-sum(param)) %>% 
+#                     mutate(model=last_param)) 
+#   
+#   df_temp <- merge(df, groups, by.x = c("quantile"), by.y = c("quantile"))
+#   df_temp <- merge(df_temp, params, by.x = c("model", "quantile_group"), 
+#                    by.y = c("model", "quantile_group")) 
+#   
+#   gqra2 <- data.frame(
+#     df_temp %>%
+#       mutate(weighted_values = value * param) %>%
+#       group_by(target_end_date, location, target, quantile, truth) %>% 
+#       summarize(value = sum(weighted_values)))
+#   return(gqra2)
+# 
+# }
 
-}
-
-gqra2_loss <- function(df, groups, params){
-  models <- unique(df$model)
+# params: vector of parameters for all but one models
+# returns a dataframe with parameters for all models and quantile groups
+gqra2_transform_params <- function(df, groups, params){
+  models <- unique(df$model) # all model names
+  last_model <- models[length(models)]
   models <- models[-length(models)]  # drop last model
   n_models <- length(models)
   
@@ -445,16 +484,35 @@ gqra2_loss <- function(df, groups, params){
   params <- data.frame(model=rep(models, each=n_groups), 
                        quantile_group=rep(group_names, n_models), 
                        param=params)
-  df_temp <- GQRA_2(df, groups, params)
-  return(mean_wis(df_temp))
+  
+  # infer parameters for each quantile group from given parameters 1-sum(given params)
+  params <- rbind(params, params %>%
+                    group_by(quantile_group) %>%
+                    summarize(param=1-sum(param)) %>%
+                    mutate(model=last_model))
+  return(params)
 }
+
+# gqra2_loss <- function(df, groups, params){
+#   models <- unique(df$model)
+#   models <- models[-length(models)]  # drop last model
+#   n_models <- length(models)
+#   
+#   group_names <- unique(groups$quantile_group)
+#   n_groups <- length(group_names)
+#   
+#   params <- data.frame(model=rep(models, each=n_groups), 
+#                        quantile_group=rep(group_names, n_models), 
+#                        param=params)
+#   df_temp <- GQRA_2(df, groups, params)
+#   return(mean_wis(df_temp))
+# }
 
 
 
 gqra2_fit <- function(df, groups){
   models <- unique(df$model)
-  models <- models[-length(models)]  # drop last model
-  n_models <- length(models)
+  n_models <- length(models) - 1
   
   group_names <- unique(groups$quantile_group)
   n_groups <- length(group_names)
@@ -474,8 +532,10 @@ gqra2_fit <- function(df, groups){
 
   p_optim <- constrOptim(theta = rep(1/(n_models*n_groups), n_models*n_groups), 
                    f = function(x){
-                     return(gqra2_loss(df, groups, params = x))},
+                     p <- gqra2_transform_params(df, groups, x)
+                     return(gqra3_loss(df, groups, params = p))},
                    ui=R, ci=r, method="Nelder-Mead")$par
+  p_optim <- gqra2_transform_params(df, groups, p_optim)
   return(p_optim)
 }
 

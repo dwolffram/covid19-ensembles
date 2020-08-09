@@ -348,8 +348,8 @@ for (ensemble in ensembles){
 evaluate <- function(df_train, df_test, ensembles){
   scores_temp <- data.frame()
   
-  alphas <- c(0.02,0.05,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9)
-  quantile_levels <- sort(c(unique(c(alphas/2, 1-alphas/2)),0.5))
+  # alphas <- c(0.02,0.05,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9)
+  # quantile_levels <- sort(c(unique(c(alphas/2, 1-alphas/2)),0.5))
   
   if("EWA" %in% ensembles){
     print("EWA")
@@ -414,7 +414,7 @@ evaluate <- function(df_train, df_test, ensembles){
   if("QRA4" %in% ensembles){
     print("QRA4")
     p <- qra4_fit(df_train)
-    df_forecast <- QRA4(df_test,p$params, p$intercepts)
+    df_forecast <- QRA4(df_test, p$params, p$intercepts)
     scores <- wis_table(df_forecast)
     scores$method <- "QRA4"
     scores_temp <- bind_rows(scores_temp, scores)
@@ -424,7 +424,7 @@ evaluate <- function(df_train, df_test, ensembles){
     print("GQRA2")
     groups <- get_quantile_groups()
     p <- gqra2_fit(df_train, groups)
-    df_forecast <- GQRA_2(df_test, groups, p)
+    df_forecast <- GQRA_3(df_test, groups, p)
     scores <- wis_table(df_forecast)
     scores$method <- "GQRA2"
     scores_temp <- bind_rows(scores_temp, scores)
@@ -472,13 +472,30 @@ evaluate_ensembles <- function(df, dates, window_sizes, ensembles, extendResults
     
     all_scores <- foreach(test_date=test_dates, .combine=rbind) %dopar% {
       print(as.character(test_date))
-      dfs <- train_test_split(df, test_date, window_size)
-      df_train <- dfs$df_train
-      df_test <- dfs$df_test
-      
-      scores <- evaluate(df_train, df_test, ensembles)
-      scores$window_size <- window_size
-      scores
+      tryCatch(
+        expr = {
+          dfs <- train_test_split(df, test_date, window_size)
+          df_train <- dfs$df_train
+          df_test <- dfs$df_test
+          
+          scores <- evaluate(df_train, df_test, ensembles)
+          scores$window_size <- window_size
+          scores
+        },
+        error = function(e){
+          message(test_date)
+          message(e)
+          scores <- NULL
+          scores
+        },
+        warning = function(w){
+          message(test_date)
+          message(w)
+          scores <- NULL
+          scores
+        }
+        
+      )
     }
     
     df_scores <- bind_rows(df_scores, all_scores)
@@ -493,9 +510,8 @@ evaluate_ensembles <- function(df, dates, window_sizes, ensembles, extendResults
 a <- evaluate_ensembles(df, c(as.Date("2020-05-09"), as.Date("2020-05-16")), 
                         c(1, 2), c('EWA', 'MED'))
 
-a <- evaluate_ensembles(df, c(as.Date("2020-05-09"), as.Date("2020-05-16"), as.Date("2020-05-23"),
-                              as.Date("2020-05-30")), 
-                        c(1), c('EWA', 'QRA2'))
+a <- evaluate_ensembles(df, possible_dates, 
+                        c(1, 2, 3, 4), c('EWA', 'MED'))
 
 ensembles <- c("EWA", "MED", "V2", "V3", "V4", "QRA2", "QRA3", "QRA4", "GQRA2", "GQRA3", "GQRA4")
 a <- evaluate_ensembles(df, c(as.Date("2020-05-09"), as.Date("2020-05-16"), as.Date("2020-05-23"),
@@ -505,3 +521,50 @@ a <- evaluate_ensembles(df, c(as.Date("2020-05-09"), as.Date("2020-05-16"), as.D
 dates <- c(as.Date("2020-05-09"), as.Date("2020-05-16"))
 test_dates <- as.list(dates[(window_size+1):length(dates)])
 
+library(doParallel)
+no_cores <- detectCores() - 1  
+no_cores <- 16
+registerDoParallel(cores=no_cores)  
+
+ensembles <- c("EWA", "MED", "V2", "V3", "V4", "QRA2", "QRA3", "QRA4", "GQRA2", "GQRA3", "GQRA4")
+window_sizes <- 1:4
+results <- evaluate_ensembles(df, possible_dates, window_sizes, ensembles)
+
+write.csv(results, "results/results_2020-08-09.csv", row.names=FALSE)
+
+dates <- possible_dates
+for (window_size in window_sizes){
+  print(paste0("Compute scores for window size ", window_size, "."))
+  
+  # possible test dates for given window size
+  if (window_size >= length(dates)){
+    print("Not enough dates for given window size.")
+    next
+  }
+  test_dates <- as.list(dates[(window_size+1):length(dates)])
+
+  for (test_date in test_dates){
+    print(as.character(test_date))
+    dfs <- train_test_split(df, test_date, window_size)
+    df_train <- dfs$df_train
+    df_test <- dfs$df_test
+    print(nrow(df_train))
+    print(nrow(df_test))
+  }
+}
+
+
+log_calculator <- function(x){
+  tryCatch(
+    expr = {
+      message(log(x))
+    },
+    warning = function(w){
+      message('Caught an warning!')
+      print(w)
+      return(NULL)
+    }
+  )    
+}
+log_calculator(-10)
+log('bla')

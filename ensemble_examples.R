@@ -119,6 +119,8 @@ qra3_loss(df_test, params)
 
 p_qra3 <- qra3_fit(df_train)
 qra3_loss(df_test, p_qra3)
+qra3_df <- QRA3(df_test, params=p_qra3)
+
 
 ### QRA4
 
@@ -129,6 +131,9 @@ qra4_loss(df_test, params, intercepts)
 
 p_qra4 <- qra4_fit(df_train)
 qra4_loss(df_test, p_qra4$params, p_qra4$intercepts)
+
+qra4_df <- QRA4(df_test, p_qra4$params, p_qra4$intercepts)
+
 
 ### QRA2
 
@@ -156,6 +161,8 @@ gqra3_loss(df_test, groups, params=rep(0.2, 5*5))
 
 p_gqra3 <- gqra3_fit(df_train, groups)
 gqra3_loss(df_test, groups, p_gqra3)
+gqra53_df <- GQRA_3(df_test, groups, p_gqra3)
+
 
 # View(data.frame(model=rep(unique(df_test$model), each=5), 
 #                 quantile_group=rep(c("g1", "g2", "g3", "g4", "g5"), 5), 
@@ -169,6 +176,8 @@ gqra4_loss(df_test, groups, params$param, intercepts$intercept)
 
 p_gqra4 <- gqra4_fit(df_train, groups)
 gqra4_loss(df_test, groups, p_gqra4$params, p_gqra4$intercept)
+gqra54_df <- GQRA_4(df_test, groups, p_gqra4$params, p_gqra4$intercept)
+
 
 
 ### GQRA_2
@@ -180,10 +189,10 @@ mean_wis(gqra2_df)
 gqra2_loss(df_test, groups, params2$param)
 
 p_gqra2 <- gqra2_fit(df_train, groups)
-gqra2_loss(df_test, groups, p_gqra2)
+gqra3_loss(df_test, groups, p_gqra2)
 
-gqra2_df <- GQRA_2(df_test, groups,p_gqra2)
-
+gqra2_df <- GQRA_3(df_test, groups,p_gqra2)
+mean_wis(gqra2_df)
 
 ### Verify that parameters for each group sum to 1
 group_names <- unique(groups$quantile_group)
