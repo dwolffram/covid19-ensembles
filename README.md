@@ -15,4 +15,4 @@ Here we evaluate ensemble methods for given dates, window sizes, etc.
 A collection of functions to visualize the results.
 
 * `functions.R`  
-Contains some basic functionality such as the WIS score and data loading functions.
+Contains some basic functionality such as the WIS score, as well as data loading and cleaning functions.
