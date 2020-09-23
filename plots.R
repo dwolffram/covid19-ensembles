@@ -27,15 +27,24 @@ results_mean <- results %>%
   group_by(model, target_end_date) %>% 
   summarize(mean_wis = mean(wis))
 
-ggplot(data = results_mean, aes(x = target_end_date, y = mean_wis, colour = model)) +
-  geom_line()
-
-results_mean_targets <- results %>%
-  select(model, target_end_date, target, wis) %>%
-  group_by(model, target_end_date, target) %>% 
+results_mean <- results %>%
+  select(method, target_end_date, wis, window_size) %>%
+  group_by(method, target_end_date, window_size) %>% 
   summarize(mean_wis = mean(wis))
 
-ggplot(data = results_mean_targets, aes(x = target_end_date, y = mean_wis, colour = model)) +
+ggplot(data = results_mean, aes(x = target_end_date, y = mean_wis, colour = method)) +
+  geom_line() +
+  facet_wrap(~window_size) +
+  ylim(0, 110)
+ggsave('plots/mean_wis_ws.png', width=24, height=14, dpi=500, unit='cm', device='png')
+
+
+results_mean_targets <- results %>%
+  select(method, target_end_date, target, wis) %>%
+  group_by(method, target_end_date, target) %>% 
+  summarize(mean_wis = mean(wis))
+
+ggplot(data = results_mean_targets, aes(x = target_end_date, y = mean_wis, colour = method)) +
   geom_line() +
   facet_wrap(~target) +
   ylim(0, 600)

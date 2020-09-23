@@ -4,10 +4,19 @@ library(dplyr)
 results = read.csv('results/results_parallel.csv',
                    colClasses = c(window_size = "factor", test_date = "Date"))
 
+results_new <- results
+wis_df <- results_new %>%
+  group_by(target_end_date, window_size, method) %>%
+  summarize(mean_wis=mean(wis))
+
 results_long <- results %>% 
   pivot_longer(names(results)[3:length(results)], names_to = "model", values_to = "wis")
 
 ggplot(data = results_long, aes(x = test_date, y = wis, colour = model)) +
+  geom_line() +
+  facet_wrap(~window_size)
+
+ggplot(data = wis_df, aes(x = target_end_date, mean_wis, colour = method)) +
   geom_line() +
   facet_wrap(~window_size)
 
@@ -44,6 +53,17 @@ ggplot(data = results_long, aes(x = model, y = wis)) +
   ylim(0, 100) +
   labs(x = "Model",
        y = "WIS")
+ggsave('plots/boxplot.png', width=24, height=14, dpi=500, unit='cm', device='png')
+
+results$window_size <- as.factor(results$window_size)
+
+ggplot(data = subset(results, location != 'US'), aes(x = window_size, y = wis)) +
+  facet_wrap(~method) +
+  geom_boxplot(outlier.shape=NA) +
+  ylim(0, 100) +
+  labs(x = "Model",
+       y = "WIS")
+
 ggsave('plots/boxplot.png', width=24, height=14, dpi=500, unit='cm', device='png')
 
 
@@ -104,6 +124,12 @@ df_rank <- results_long %>%
   arrange(window_size, test_date, wis) %>% 
   mutate(ranking = row_number())
 
+df_rank <- wis_df %>% 
+  group_by(window_size, target_end_date) %>%
+  arrange(window_size, target_end_date, mean_wis) %>%
+  mutate(ranking = row_number())
+
+df_rank <- rename(df_rank, c(test_date=target_end_date, model=method))
 
 bump_chart <- function(windowSize="1", highlight_models=unique(df_rank$model)){
   df_temp <- subset(df_rank, window_size==windowSize)
@@ -141,6 +167,8 @@ bump_chart <- function(windowSize="1", highlight_models=unique(df_rank$model)){
 }
 
 bump_chart()
+bump_chart("4")
+
 bump_chart("4", c("EWA","V3","QRA2", "GQRA3"))
 
 bump_chart(1)
@@ -161,3 +189,43 @@ ggsave('plots/bump_chart_EWA.png', width=24, height=14, dpi=500, unit='cm', devi
 
 bump_chart(4, c("EWA","V3","QRA3", "GQRA3"))
 
+
+### WIS Decomposition
+
+# create an empty plot to which forecasts can be added:
+empty_plot <- function(xlim, ylim, xlab, ylab){
+  plot(NULL, xlim = xlim, ylim = ylim,
+       xlab = xlab, ylab = "", axes = FALSE)
+  axis(2, las = 1)
+  title(ylab = ylab, line = 4)
+  all_dates <- seq(from = as.Date("2020-02-01"), to = Sys.Date() + 28, by  =1)
+  saturdays <- all_dates[weekdays(all_dates) == "Saturday"]
+  axis(1, at = saturdays, labels = as.Date(saturdays, origin = "1970-01-01"))
+  box()
+}
+
+plot_scores <- function(wis_tab, method, location, 
+                        xlim = c(as.Date("2020-04-01"), 
+                        Sys.Date() + 28), ylim = c(0, 5000)){
+  
+  # subset to chosen target:
+  wis_tab <- wis_tab[(wis_tab$method == method) & (wis_tab$location == location), ]
+
+  empty_plot(xlab = "target end date", xlim = xlim, ylim = ylim, 
+             ylab = "WIS")
+  
+  lines(wis_tab$target_end_date, wis_tab$wis, type = "h", col = "red", lwd = 2)
+  lines(wis_tab$target_end_date, wis_tab$wgt_pen_l + wis_tab$wgt_iw, type = "h", col = "royalblue", lwd = 2)
+  lines(wis_tab$target_end_date, wis_tab$wgt_pen_l, type = "h", col = "orange", lwd = 2)
+  # points(wis_tab$target_end_date, wis_tab$wis, pch = 1, lwd = 2)
+  
+  legend("topright", legend = c("penalty for underprediction",
+                                "forecast dispersion",
+                                "penalty for overprediction"),
+         col = c("red", "royalblue1", "orange"), lwd = c(2, 2, 2, NA),
+         bty = "n", cex = 0.9, pch = c(NA, NA, NA, 5))
+  
+  title(main=paste(method, location, sep=' - '))
+}
+
+plot_scores(results, 'QRA4', '36', ylim = c(0, 1300))
