@@ -29,6 +29,7 @@ possible_dates <- df %>%
   filter(model_count == length(models)) %>%
   pull(target_end_date)
 
+
 # only consider 1 week ahead forecasts and only the dates with all models available
 df <- df %>% 
   filter(target == "1 wk ahead cum death") %>%
@@ -36,7 +37,7 @@ df <- df %>%
 
 library(doParallel)
 no_cores <- detectCores() - 1  
-no_cores <- 16
+#no_cores <- 16
 registerDoParallel(cores=no_cores)  
 
 ensembles <- c("EWA", "MED", "V2", "V3", "V4", "QRA2", "QRA3", 
@@ -44,5 +45,8 @@ ensembles <- c("EWA", "MED", "V2", "V3", "V4", "QRA2", "QRA3",
 window_sizes <- 1:4
 
 results <- evaluate_ensembles(df, possible_dates, window_sizes, ensembles)
+
+file_name <- paste0("results/results_", Sys.Date(), ".csv")
+write.csv(results, file_name, row.names=FALSE)
 
 # write.csv(results, "results/results_2020-08-09.csv", row.names=FALSE)

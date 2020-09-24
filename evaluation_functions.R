@@ -123,7 +123,9 @@ evaluate_ensembles <- function(df, dates, window_sizes, ensembles, extendResults
       print("Not enough dates for given window size.")
       next
     }
-    test_dates <- as.list(dates[(window_size+1):length(dates)])
+    
+    #test_dates <- as.list(dates[(window_size+1):length(dates)])
+    test_dates <- as.list(dates[(max(window_sizes)+1):length(dates)])
     test_dates <- setdiff(test_dates, old_test_dates)
     
     all_scores <- foreach(test_date=test_dates, .combine=rbind) %dopar% {
@@ -159,7 +161,6 @@ evaluate_ensembles <- function(df, dates, window_sizes, ensembles, extendResults
   
   # append new results to old results given by extendResults
   df_scores <- bind_rows(extendResults, df_scores)
-  
   
   return(df_scores)
 }
