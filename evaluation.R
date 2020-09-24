@@ -50,3 +50,15 @@ file_name <- paste0("results/results_", Sys.Date(), ".csv")
 write.csv(results, file_name, row.names=FALSE)
 
 # write.csv(results, "results/results_2020-08-09.csv", row.names=FALSE)
+
+
+### EXCLUDE US FROM TRAINING
+
+ensembles <- c("EWA", "MED", "V2", "V3", "V4", "QRA2", "QRA3", 
+               "QRA4", "GQRA2", "GQRA3", "GQRA4")
+window_sizes <- 1:4
+
+results <- evaluate_ensembles(df, possible_dates, window_sizes, ensembles, exclude_us_from_training=TRUE)
+
+file_name <- paste0("results/results_", Sys.Date(), "_train_without_us.csv")
+write.csv(results, file_name, row.names=FALSE)

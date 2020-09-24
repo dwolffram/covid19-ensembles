@@ -110,7 +110,9 @@ evaluate <- function(df_train, df_test, ensembles){
   return(scores_temp)
 }
 
-evaluate_ensembles <- function(df, dates, window_sizes, ensembles, extendResults=NULL){
+
+evaluate_ensembles <- function(df, dates, window_sizes, ensembles, 
+                               exclude_us_from_training=FALSE, extendResults=NULL){
   old_test_dates <- unique(extendResults$target_end_date)
   
   df_scores <- data.frame()
@@ -133,7 +135,12 @@ evaluate_ensembles <- function(df, dates, window_sizes, ensembles, extendResults
       tryCatch(
         expr = {
           dfs <- train_test_split(df, test_date, window_size)
+          
           df_train <- dfs$df_train
+          if (exclude_us_from_training){
+            df_train <- subset(df_train, location != 'US')
+          }
+          
           df_test <- dfs$df_test
           
           scores <- evaluate(df_train, df_test, ensembles)

@@ -6,6 +6,9 @@ library(viridis)
 results = read.csv('results/results_2020-09-23.csv',
                    colClasses = c(window_size = "factor", target_end_date = "Date"))
 
+results = read.csv('results/results_2020-09-24_train_without_us.csv',
+                   colClasses = c(window_size = "factor", target_end_date = "Date"))
+
 mean_wis_df <- results %>%
   group_by(target_end_date, window_size, method) %>%
   summarize(mean_wis=mean(wis))
@@ -119,7 +122,7 @@ ggplot(data = subset(results, location != 'US' & window_size == 4),
        aes(x = method, y = wis)) +
   geom_boxplot(outlier.shape=NA)+
   stat_summary(fun.y=mean, geom="point", shape=4) +
-  ylim(0, 100) +
+  ylim(0, 50) +
   labs(title = "States",
        x = "Model",
        y = "WIS")
@@ -211,7 +214,7 @@ df_rank_us <- mean_wis_us %>%
   mutate(ranking = row_number())
 
 
-df_rank <- wis_df %>% 
+df_rank <- mean_wis_df %>% 
   group_by(window_size, target_end_date) %>%
   arrange(window_size, target_end_date, mean_wis) %>%
   mutate(ranking = row_number())
@@ -256,6 +259,7 @@ bump_chart <- function(df_rank, windowSize="1", highlight_models=unique(df_rank$
 }
 
 bump_chart(df_rank_us, 4, c("V2", "V3","V4", "GQRA3", "QRA4"))
+bump_chart(df_rank, 4)
 
 bump_chart(1)
 bump_chart("4")
