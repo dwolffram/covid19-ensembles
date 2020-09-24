@@ -1,41 +1,48 @@
 setwd("/home/dwolffram/covid19-ensembles")
 library(tidyverse)
 library(dplyr)
-results = read.csv('results/results_parallel.csv',
-                   colClasses = c(window_size = "factor", test_date = "Date"))
+library(viridis)
 
-results_new <- results
-wis_df <- results_new %>%
+results = read.csv('results/results_2020-09-23.csv',
+                   colClasses = c(window_size = "factor", target_end_date = "Date"))
+
+mean_wis_df <- results %>%
   group_by(target_end_date, window_size, method) %>%
   summarize(mean_wis=mean(wis))
 
-results_long <- results %>% 
-  pivot_longer(names(results)[3:length(results)], names_to = "model", values_to = "wis")
-
-ggplot(data = results_long, aes(x = test_date, y = wis, colour = model)) +
+ggplot(data = mean_wis_df, aes(x = target_end_date, mean_wis, colour = method)) +
   geom_line() +
   facet_wrap(~window_size)
 
-ggplot(data = wis_df, aes(x = target_end_date, mean_wis, colour = method)) +
-  geom_line() +
-  facet_wrap(~window_size)
+mean_wis_wide <- mean_wis_df %>%
+  pivot_wider(names_from = method, values_from = mean_wis)
 
-ggplot(data=results, aes(x=test_date, y=V2)) +
+
+ggplot(data=mean_wis_wide, aes(x=target_end_date, y=V2)) +
   geom_point()  +
   facet_wrap(~window_size) + 
-  geom_segment( aes(x=test_date, xend=test_date, y=0, yend=V2))
+  geom_segment( aes(x=target_end_date, xend=target_end_date, y=0, yend=V2))
 
-results$median <- apply(results[3:length(results)], 1, median, na.rm = T)
+mean_wis_wide$median <- apply(mean_wis_wide[3:length(mean_wis_wide)], 1, median, na.rm = T)
 
-plot_comparison <- function(model_name="EWA"){
-  results %>% mutate(Color = ifelse(get(model_name)-median < 0, "green", "red")) %>%
-    ggplot(aes(x=test_date, y=get(model_name)-median, color=Color)) +
+plot_comparison <- function(model_name="MED", baseline="EWA"){
+  mean_wis_wide %>% mutate(Color = ifelse(get(model_name)-get(baseline) < 0, "green", "red")) %>%
+    ggplot(aes(x=target_end_date, y=get(model_name)-get(baseline), color=Color)) +
     geom_point()  +
     facet_wrap(~window_size) + 
-    geom_segment( aes(x=test_date, xend=test_date, y=0, yend=get(model_name)-median))+
+    geom_segment( aes(x=target_end_date, xend=target_end_date, y=0, yend=get(model_name)-get(baseline)))+
     scale_color_identity() +
-    ylab(paste(model_name, "-", "median"))
+    ylab(paste(model_name, "-", baseline)) +
+    xlab("Test Date")
 }
+
+
+plot_comparison("MED")
+plot_comparison("V2")
+plot_comparison("V3")
+plot_comparison("V4")
+plot_comparison("V2", "V3")
+
 
 plot_comparison("EWA")
 ggsave('plots/comp_EWA.png', width=24, height=12, dpi=500, unit='cm', device='png')
@@ -47,20 +54,80 @@ plot_comparison("V2")
 ggsave('plots/comp_V2.png', width=24, height=12, dpi=500, unit='cm', device='png')
 
 
-ggplot(data = results_long, aes(x = model, y = wis)) +
+ggplot(data = mean_wis_df, aes(x = method, y = mean_wis)) +
   #facet_wrap(~window_size) +
   geom_boxplot(outlier.shape=NA) +
-  ylim(0, 100) +
+  #ylim(0, 100) +
   labs(x = "Model",
-       y = "WIS")
+       y = "Mean WIS")
 ggsave('plots/boxplot.png', width=24, height=14, dpi=500, unit='cm', device='png')
 
-results$window_size <- as.factor(results$window_size)
+#results$window_size <- as.factor(results$window_size)
 
-ggplot(data = subset(results, location != 'US'), aes(x = window_size, y = wis)) +
+ggplot(data = subset(results, location == 'US'), aes(x = window_size, y = wis)) +
   facet_wrap(~method) +
   geom_boxplot(outlier.shape=NA) +
+  #ylim(0, 500) +
+  labs(x = "Model",
+       y = "WIS")
+
+ggplot(data = subset(results, location == 'US' & window_size == 4), 
+       aes(x = method, y = wis, fill=method)) +
+  geom_violin(width=1) +
+  geom_boxplot(width=0.1, color="grey", alpha=0.5, outlier.shape=NA) +
+  stat_summary(fun.y=mean, geom="point", shape=3, color="grey") +
+  scale_fill_viridis(discrete = TRUE) +
+  theme(legend.position = "none") +
+  labs(title= "US",
+       x = "Model",
+       y = "WIS")
+
+ggplot(data = subset(results, location != 'US' & window_size == 4), 
+       aes(x = method, y = wis, fill=method)) +
+  geom_violin(width=1) +
+  geom_boxplot(width=0.1, color="grey", alpha=0.5, outlier.shape=NA) +
+  stat_summary(fun.y=mean, geom="point", shape=3, color="grey") +
+  scale_fill_viridis(discrete = TRUE) +
+  theme(legend.position = "none") +
   ylim(0, 100) +
+  labs(title= "States",
+       x = "Model",
+       y = "WIS")
+
+ggplot(data = subset(results, location == 'US' & window_size == 4), 
+       aes(x = method, y = wis, fill=method)) +
+  geom_boxplot(outlier.shape=NA) +
+  stat_summary(fun.y=mean, geom="point", shape=3) +
+  scale_fill_viridis(discrete = TRUE, alpha=0.5) +
+  theme(legend.position = "none") +
+  labs(title= "US",
+       x = "Model",
+       y = "WIS")
+
+ggplot(data = subset(results, location == 'US'), 
+       aes(x = method, y = wis, fill=method)) +
+  facet_wrap(~window_size) +
+  geom_boxplot(outlier.shape=NA) +
+  stat_summary(fun.y=mean, geom="point", shape=3) +
+  scale_fill_viridis(discrete = TRUE, alpha=0.5) +
+  theme(legend.position = "none") +
+  labs(title= "US",
+       x = "Model",
+       y = "WIS")
+
+ggplot(data = subset(results, location != 'US' & window_size == 4), 
+       aes(x = method, y = wis)) +
+  geom_boxplot(outlier.shape=NA)+
+  stat_summary(fun.y=mean, geom="point", shape=4) +
+  ylim(0, 100) +
+  labs(title = "States",
+       x = "Model",
+       y = "WIS")
+
+ggplot(data = results, aes(x = window_size, y = wis)) +
+  facet_wrap(~method) +
+  geom_boxplot(outlier.shape=NA) +
+  #ylim(0, 100) +
   labs(x = "Model",
        y = "WIS")
 
@@ -124,37 +191,59 @@ df_rank <- results_long %>%
   arrange(window_size, test_date, wis) %>% 
   mutate(ranking = row_number())
 
+
+mean_wis_us <- results %>%
+  subset(location=="US") %>%
+  group_by(target_end_date, window_size, method) %>%
+  summarize(mean_wis=mean(wis))
+
+
+ggplot(data = mean_wis_us, aes(x = target_end_date, mean_wis, colour = method)) +
+  geom_line() +
+  facet_wrap(~window_size)
+
+ggplot(data = subset(mean_wis_us, window_size==4), aes(x = target_end_date, mean_wis, colour = method)) +
+  geom_line() 
+
+df_rank_us <- mean_wis_us %>% 
+  group_by(window_size, target_end_date) %>%
+  arrange(window_size, target_end_date, mean_wis) %>%
+  mutate(ranking = row_number())
+
+
 df_rank <- wis_df %>% 
   group_by(window_size, target_end_date) %>%
   arrange(window_size, target_end_date, mean_wis) %>%
   mutate(ranking = row_number())
 
-df_rank <- rename(df_rank, c(test_date=target_end_date, model=method))
+#df_rank <- rename(df_rank, c(test_date=target_end_date, model=method))
 
-bump_chart <- function(windowSize="1", highlight_models=unique(df_rank$model)){
+
+
+bump_chart <- function(df_rank, windowSize="1", highlight_models=unique(df_rank$method)){
   df_temp <- subset(df_rank, window_size==windowSize)
-  dates <- sort(unique(df_temp$test_date))
+  dates <- sort(unique(df_temp$target_end_date))
   
   df_temp <- df_temp %>%
-    mutate(flag = ifelse(model %in% highlight_models, TRUE, FALSE),
-           model_col = if_else(flag == TRUE, model, "zzz"))
+    mutate(flag = ifelse(method %in% highlight_models, TRUE, FALSE),
+           model_col = if_else(flag == TRUE, as.character(method), "zzz"))
   
   pal <- gg_color_hue(length(unique(df_temp$model_col)) -1)
   pal[length(pal)+1] <- "grey"
   
-  ggplot(data = df_temp, aes(x = test_date, y = ranking, group = model)) +
+  ggplot(data = df_temp, aes(x = target_end_date, y = ranking, group = method)) +
     geom_line(aes(color = model_col, alpha = 1), size = 2) +
     geom_point(color = "#FFFFFF", size = 4) +
     geom_point(aes(color = model_col, alpha = 1), size = 4) +
     geom_point(color = "#FFFFFF", size = 1) +
     scale_y_reverse(breaks = 1:nrow(df_temp)) +
-    scale_x_date(breaks = unique(df_temp$test_date), 
-                       minor_breaks = unique(df_temp$test_date), expand = c(.05, .05)) +
-    geom_text(data = df_temp %>% filter(test_date == dates[1]),
-              aes(label = model, x = dates[1]-1) , hjust = 1, fontface = "bold", 
+    scale_x_date(breaks = unique(df_temp$target_end_date), 
+                       minor_breaks = unique(df_temp$target_end_date), expand = c(.05, .05)) +
+    geom_text(data = df_temp %>% filter(target_end_date == dates[1]),
+              aes(label = method, x = dates[1]-1) , hjust = 1, fontface = "bold", 
               color = "#888888", size = 4) +
-    geom_text(data = df_temp %>% filter(test_date == dates[length(dates)]),
-              aes(label = model, x = dates[length(dates)]+1) , hjust = 0, fontface = "bold", 
+    geom_text(data = df_temp %>% filter(target_end_date == dates[length(dates)]),
+              aes(label = method, x = dates[length(dates)]+1) , hjust = 0, fontface = "bold", 
               color = "#888888", size = 4) +
     coord_cartesian(xlim = c(dates[1]-4,dates[length(dates)]+4)) +
     theme(legend.position = "none") +
@@ -166,10 +255,12 @@ bump_chart <- function(windowSize="1", highlight_models=unique(df_rank$model)){
     scale_color_manual(values = pal)
 }
 
-bump_chart()
+bump_chart(df_rank_us, 4, c("V2", "V3","V4", "GQRA3", "QRA4"))
+
+bump_chart(1)
 bump_chart("4")
 
-bump_chart("4", c("EWA","V3","QRA2", "GQRA3"))
+bump_chart("4", c("EWA","MED", "V3","QRA2", "GQRA3"))
 
 bump_chart(1)
 ggsave('plots/bump_chart_ws1.png', width=24, height=14, dpi=500, unit='cm', device='png')
@@ -188,6 +279,29 @@ ggsave('plots/bump_chart_EWA.png', width=24, height=14, dpi=500, unit='cm', devi
 
 
 bump_chart(4, c("EWA","V3","QRA3", "GQRA3"))
+
+
+### Truth Plots
+truth_us <- results %>%
+  subset(location=="US") %>%
+  select(c(target_end_date, truth)) %>%
+  distinct()
+
+ggplot(truth_us, aes(x=target_end_date, y=truth)) +
+  geom_line() +
+  labs(x="Date", y="Cumulative Deaths", title="Cumulative Deaths in the US")
+
+
+truth_df <- results %>%
+  #subset(location!="US") %>%
+  select(c(location, target_end_date, truth)) %>%
+  distinct()
+
+ggplot(truth_df, aes(x=target_end_date, y=truth)) +
+  facet_wrap(~location, scales='free') +
+  #facet_wrap(~location) +
+  geom_line() +
+  labs(x="Date", y="Cumulative Deaths", title="Cumulative Deaths by State")
 
 
 ### WIS Decomposition
