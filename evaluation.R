@@ -37,7 +37,7 @@ df <- df %>%
 
 library(doParallel)
 no_cores <- detectCores() - 1  
-#no_cores <- 16
+no_cores <- 32
 registerDoParallel(cores=no_cores)  
 
 ensembles <- c("EWA", "MED", "V2", "V3", "V4", "QRA2", "QRA3", 
@@ -58,7 +58,11 @@ ensembles <- c("EWA", "MED", "V2", "V3", "V4", "QRA2", "QRA3",
                "QRA4", "GQRA2", "GQRA3", "GQRA4")
 window_sizes <- 1:4
 
+#dates <- as.Date(c("2020-07-11", "2020-07-18", "2020-07-25", "2020-08-01", "2020-08-08"))
+
 results <- evaluate_ensembles(df, possible_dates, window_sizes, ensembles, exclude_us_from_training=TRUE)
 
 file_name <- paste0("results/results_", Sys.Date(), "_train_without_us.csv")
+file_name <- paste0("results/results_2020-08-08_train_without_us.csv")
+
 write.csv(results, file_name, row.names=FALSE)

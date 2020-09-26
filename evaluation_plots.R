@@ -3,11 +3,25 @@ library(tidyverse)
 library(dplyr)
 library(viridis)
 
-results = read.csv('results/results_2020-09-23.csv',
+results_2020_09_23 = read.csv('results/results_2020-09-23.csv',
                    colClasses = c(window_size = "factor", target_end_date = "Date"))
 
-results = read.csv('results/results_2020-09-24_train_without_us.csv',
+results = read.csv('results/results_2020-09-25_train_without_us.csv',
                    colClasses = c(window_size = "factor", target_end_date = "Date"))
+
+results %>%
+  count(target_end_date)
+
+a <- subset(results, target_end_date=="2020-08-08")
+
+unique(a$window_size)
+unique(a$method)
+
+results_2020_09_23 %>%
+  count(target_end_date)
+
+
+subset(results, target_end_date == "2020-08-08")
 
 mean_wis_df <- results %>%
   group_by(target_end_date, window_size, method) %>%
@@ -88,12 +102,24 @@ ggplot(data = subset(results, location == 'US' & window_size == 4),
 ggplot(data = subset(results, location != 'US' & window_size == 4), 
        aes(x = method, y = wis, fill=method)) +
   geom_violin(width=1) +
-  geom_boxplot(width=0.1, color="grey", alpha=0.5, outlier.shape=NA) +
+  geom_boxplot(width=0.1, color="grey", alpha=0.5) +
   stat_summary(fun.y=mean, geom="point", shape=3, color="grey") +
   scale_fill_viridis(discrete = TRUE) +
   theme(legend.position = "none") +
-  ylim(0, 100) +
+  #ylim(0, 100) +
   labs(title= "States",
+       x = "Model",
+       y = "WIS")
+
+
+ggplot(data = subset(results, window_size == 4), 
+       aes(x = method, y = wis, fill=method)) +
+  facet_wrap(~location, scales="free") +
+  geom_boxplot(outlier.shape=NA) +
+  stat_summary(fun.y=mean, geom="point", shape=3) +
+  scale_fill_viridis(discrete = TRUE, alpha=0.5) +
+  theme(legend.position = "none") +
+  labs(title= "US and States - Window Size 4",
        x = "Model",
        y = "WIS")
 
@@ -103,7 +129,18 @@ ggplot(data = subset(results, location == 'US' & window_size == 4),
   stat_summary(fun.y=mean, geom="point", shape=3) +
   scale_fill_viridis(discrete = TRUE, alpha=0.5) +
   theme(legend.position = "none") +
-  labs(title= "US",
+  labs(title= "US - Window Size 4",
+       x = "Model",
+       y = "WIS")
+
+ggplot(data = subset(results, location != 'US' & window_size == 4), 
+       aes(x = method, y = wis, fill=method)) +
+  geom_boxplot(outlier.shape=NA) +
+  stat_summary(fun.y=mean, geom="point", shape=3) +
+  scale_fill_viridis(discrete = TRUE, alpha=0.5) +
+  ylim(0, 50) +
+  theme(legend.position = "none") +
+  labs(title= "States - Window Size 4",
        x = "Model",
        y = "WIS")
 
@@ -118,11 +155,48 @@ ggplot(data = subset(results, location == 'US'),
        x = "Model",
        y = "WIS")
 
+results$window_size <- as.factor(results$window_size)
+
+ggplot(data = subset(results, location == 'US'), 
+       aes(x = window_size, y = wis, fill=window_size)) +
+  facet_wrap(~method) +
+  geom_boxplot(outlier.shape=NA) +
+  stat_summary(fun.y=mean, geom="point", shape=3) +
+  scale_fill_viridis(discrete = TRUE, alpha=0.5) +
+  theme(legend.position = "none") +
+  labs(title= "US",
+       x = "Window Size",
+       y = "WIS")
+
+ggplot(data = subset(results, location != 'US'), 
+       aes(x = window_size, y = wis, fill=window_size)) +
+  facet_wrap(~method) +
+  geom_violin(width=1) +
+  geom_boxplot(width=0.1, color="grey", alpha=0.5) +  stat_summary(fun.y=mean, geom="point", shape=3) +
+  scale_fill_viridis(discrete = TRUE, alpha=0.5) +
+  #ylim(0, 50) +
+  theme(legend.position = "none") +
+  labs(title= "States",
+       x = "Window Size",
+       y = "WIS")
+
+ggplot(data = subset(results, location != 'US'), 
+       aes(x = window_size, y = wis, fill=window_size)) +
+  facet_wrap(~method) +
+  geom_boxplot(outlier.shape=NA) +
+  stat_summary(fun.y=mean, geom="point", shape=3) +
+  scale_fill_viridis(discrete = TRUE, alpha=0.5) +
+  ylim(100, 500) +
+  theme(legend.position = "none") +
+  labs(title= "States",
+       x = "Window Size",
+       y = "WIS")
+
 ggplot(data = subset(results, location != 'US' & window_size == 4), 
        aes(x = method, y = wis)) +
   geom_boxplot(outlier.shape=NA)+
   stat_summary(fun.y=mean, geom="point", shape=4) +
-  ylim(0, 50) +
+  ylim(0, 100) +
   labs(title = "States",
        x = "Model",
        y = "WIS")
