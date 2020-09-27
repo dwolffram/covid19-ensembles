@@ -199,13 +199,13 @@ ggplot(results_long,
        x = "Model",
        y = "WIS")
 
-ggplot(subset(results_long, location=="US"), 
+ggplot(subset(results_long, location!="US"), 
        aes(x=model, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
-  geom_bar(position="fill", stat="identity") +
+  geom_bar(position="stack", stat="identity") +
   theme(axis.text.x=element_text(angle=45,hjust=1)) +
   scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
                      labels = c("Overprediction", "Dispersion", "Underprediction")) +
-  labs(title= "US",
+  labs(title= "States",
        x = "Model",
        y = NULL)
 
@@ -215,3 +215,13 @@ ggplot(results_long, aes(fill=penalty, y=value, x=model)) +
   facet_wrap(~location, scales="free") +
   stat_summary(fun.y=sum,geom="bar",fill=penalty,colour="black")
   
+ggplot(subset(results_long, location=="US"), 
+       aes(x=model, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  facet_wrap(~target_end_date) +
+  geom_bar(position="stack", stat="identity") +
+  theme(axis.text.x=element_text(angle=90,hjust=1)) +
+  scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
+                     labels = c("Overprediction", "Dispersion", "Underprediction")) +
+  labs(title= "WIS decomposition by date on national level",
+       x = "Model",
+       y = "WIS")

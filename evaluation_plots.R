@@ -3,10 +3,10 @@ library(tidyverse)
 library(dplyr)
 library(viridis)
 
-results_2020_09_23 = read.csv('results/results_2020-09-23.csv',
+results = read.csv('results/results_2020-09-23.csv',
                    colClasses = c(window_size = "factor", target_end_date = "Date"))
 
-results = read.csv('results/results_2020-09-25_train_without_us.csv',
+results = read.csv('results/results_2020-09-26_train_without_us.csv',
                    colClasses = c(window_size = "factor", target_end_date = "Date"))
 
 results %>%
@@ -421,3 +421,51 @@ plot_scores <- function(wis_tab, method, location,
 }
 
 plot_scores(results, 'QRA4', '36', ylim = c(0, 1300))
+
+### WIS DECOMPOSITION NEW
+results_long <- pivot_longer(results, cols=c("wgt_pen_u", "wgt_iw", "wgt_pen_l"),
+                             names_to="penalty")
+
+ggplot(subset(results_long, location!="US" & value >= 0), 
+       aes(x=method, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  geom_bar(position="stack", stat="identity") +
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
+                     labels = c("Overprediction", "Dispersion", "Underprediction")) +
+  labs(title= "WIS decomposition on state level",
+       x = "Model",
+       y = "WIS") +
+  ylim(0, 160000)
+
+ggplot(subset(results_long, value >= 0), 
+       aes(x=method, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  facet_wrap(~location, scales="free_y") +
+  geom_bar(position="stack", stat="identity") +
+  theme(axis.text.x=element_text(angle=90,hjust=1)) +
+  scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
+                     labels = c("Overprediction", "Dispersion", "Underprediction")) +
+  labs(title= "WIS Decomposition by State and Ensemble Method",
+       x = "Model",
+       y = "Relative Contribution to WIS")
+
+ggplot(subset(results_long, location!="US" & value >= 0 & window_size == 4), 
+       aes(x=target_end_date, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  facet_wrap(~method, scales="free_y") +
+  geom_bar(position="stack", stat="identity") +
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
+                     labels = c("Overprediction", "Dispersion", "Underprediction")) +
+  labs(title= "WIS decomposition on state level (window size 4)",
+       x = "Model",
+       y = "WIS")
+
+ggplot(subset(results_long, location=="US" & value >= 0 & window_size == 4), 
+       aes(x=method, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  facet_wrap(~target_end_date) +
+  geom_bar(position="stack", stat="identity") +
+  theme(axis.text.x=element_text(angle=90,hjust=1)) +
+  scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
+                     labels = c("Overprediction", "Dispersion", "Underprediction")) +
+  labs(title= "WIS decomposition on national level (window size 4)",
+       x = "Model",
+       y = "WIS")
