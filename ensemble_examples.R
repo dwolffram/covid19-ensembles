@@ -9,7 +9,7 @@ library(quantreg)
 models <- c("LANL-GrowthRate", "CovidAnalytics-DELPHI", "MOBS-GLEAM_COVID", 
             "YYG-ParamSearch", "UCLA-SuEIR")
 
-exclude_locations <- c("11", "66", "69", "72", "78")
+exclude_locations <- c("11", "60", "66", "69", "72", "78")
 
 
 df <- load_df(models=models, exclude_locations=exclude_locations)
@@ -38,10 +38,14 @@ df <- df %>%
 test_dates <- possible_dates[4:8]
 
 window_size = 4
-train_start = test_dates - window_size*7
 
-df_test = subset(df, target_end_date == test_dates[1])
-df_train = subset(df, (target_end_date < test_dates[1]) & (target_end_date >= train_start[1]))
+#train_start = test_dates - window_size*7
+#df_test = subset(df, target_end_date == test_dates[1])
+#df_train = subset(df, (target_end_date < test_dates[1]) & (target_end_date >= train_start[1]))
+
+dfs <- train_test_split(df, test_dates[1], window_size)
+df_train <- dfs$df_train
+df_test <- dfs$df_test
 
 
 ### EWA
@@ -73,7 +77,7 @@ for (e in c(EWA, MED)){
 
 
 ### V3
-v3_df <- V3(df_test, params=rep(0.2, 5))
+v3_df <- V3(df_test, params=rep(0.2, 6))
 v3_scores <- wis_table(v3_df)
 mean(v3_scores$wis)
 
@@ -112,9 +116,11 @@ quantile_levels <- sort(c(unique(c(alphas/2, 1-alphas/2)),0.5))
 
 #quantile_levels1 <- c(0.01, 0.025, seq(0.05, 0.95, by = 0.05), 0.975, 0.99)
 
-params <- data.frame(model=rep(models, each=23), quantile=quantile_levels, param=rep(0.2, 5*23))
+params <- data.frame(model=rep(models, each=23), quantile=quantile_levels, param=rep(0.2, 6*23))
 
 qra3_df <- QRA3(df_test, params=params)
+
+#qra3_df[qra3_df$value == sort_quantiles((qra3_df))$value, ]
 qra3_loss(df_test, params)
 
 p_qra3 <- qra3_fit(df_train)
@@ -221,3 +227,36 @@ params3 %>% group_by(quantile_group) %>% summarize(sum(param))
 #                                            "US"))
 # 
 # df_temp %>% filter(location=="US" & location_name=="None")
+
+# SORT QUANTILE CROSSINGS
+
+ewa_df <- EWA(df_test)
+
+ewa_crossed <- ewa_df %>% 
+  group_by(target_end_date, location, target) %>%
+  mutate(value = value[sample(row_number())])
+
+ewa_sorted <- ewa_crossed %>% 
+  group_by(target_end_date, location, target) %>%
+  mutate(value = sort(value))
+
+a <- subset(ewa_df, target_end_date=='2020-05-30' & location=='01')
+b <- subset(ewa_crossed, target_end_date=='2020-05-30' & location=='01')
+c <- subset(ewa_sorted, target_end_date=='2020-05-30' & location=='01')
+
+ewa_df[ewa_df$value != ewa_crossed$value, ]
+ewa_df[ewa_df$value != ewa_sorted$value, ]
+
+
+
+sort_quantiles <- function(df_forecast){
+  return(
+    df_forecast %>% 
+      group_by(target_end_date, location, target) %>%
+      mutate(value = sort(value)) %>%
+      as.data.frame()
+  )
+}
+b
+d <- sort_quantiles(b)
+class(d)

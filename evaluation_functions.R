@@ -1,9 +1,56 @@
+# train_test_split <- function(df, test_date, window_size){
+#   train_start = test_date - window_size*7
+#   df_test = subset(df, target_end_date == test_date)
+#   df_train = subset(df, (target_end_date < test_date) & (target_end_date >= train_start))
+#   return(list(df_train=df_train, df_test=df_test))
+# }
+
 train_test_split <- function(df, test_date, window_size){
-  train_start = test_date - window_size*7
   df_test = subset(df, target_end_date == test_date)
+  
+  train_start = test_date - window_size*7
   df_train = subset(df, (target_end_date < test_date) & (target_end_date >= train_start))
+  
+  # load historic truth data for training (possibly unrevised at forecast date)
+  forecast_date = test_date - 5
+  truth_at_forecast_date <- read.csv(paste0("data/jhu_historic_deaths/processed/truth_jhu_deaths_as_of_",
+                                            forecast_date, ".csv"), 
+                                     colClasses = c(location = "character", date = "Date"))
+  
+  df_train <- df_train %>%
+    left_join(truth_at_forecast_date, by=c("target_end_date"="date", "location"="location")) %>%
+    select(-truth) %>%
+    rename(truth = truth_at_forecast_date)
+  
   return(list(df_train=df_train, df_test=df_test))
 }
+
+sort_quantiles <- function(df_forecast){
+  return(
+    df_forecast %>% 
+      group_by(target_end_date, location, target) %>%
+      mutate(value = sort(value)) %>%
+      as.data.frame()
+  )
+}
+
+# df_test = subset(df, target_end_date == test_date)
+# 
+# window_size = 4
+# test_date = as.Date("2020-09-26")
+# 
+# forecast_date = test_date - 5
+# train_start = test_date - window_size*7
+# df_train = subset(df, (target_end_date < test_date) & (target_end_date >= train_start))
+# truth_at_forecast_date <- read.csv(paste0("data/jhu_historic_deaths/processed/truth_jhu_deaths_as_of_",
+#                                           forecast_date, ".csv"), 
+#                                    colClasses = c(location = "character", date = "Date"))
+# 
+# df_train_new <- df_train %>%
+#   left_join(truth_at_forecast_date, by=c("target_end_date"="date", "location"="location")) %>%
+#   select(-truth) %>%
+#   rename(truth = truth_at_forecast_date)
+
 
 evaluate <- function(df_train, df_test, ensembles){
   scores_temp <- data.frame()
@@ -11,6 +58,7 @@ evaluate <- function(df_train, df_test, ensembles){
   if("EWA" %in% ensembles){
     print("EWA")
     df_forecast <- EWA(df_test)
+    df_forecast <- sort_quantiles(df_forecast)
     scores <- wis_table(df_forecast)
     scores$method <- "EWA"
     scores_temp <- bind_rows(scores_temp, scores)
@@ -19,6 +67,7 @@ evaluate <- function(df_train, df_test, ensembles){
   if ("MED" %in% ensembles){
     print("MED")
     df_forecast <- MED(df_test)
+    df_forecast <- sort_quantiles(df_forecast)
     scores <- wis_table(df_forecast)
     scores$method <- "MED"
     scores_temp <- bind_rows(scores_temp, scores)
@@ -28,6 +77,7 @@ evaluate <- function(df_train, df_test, ensembles){
     print("V2")
     p <- v2_fit(df_train)
     df_forecast <- V2(df_test, params=p)
+    df_forecast <- sort_quantiles(df_forecast)
     scores <- wis_table(df_forecast)
     scores$method <- "V2"
     scores_temp <- bind_rows(scores_temp, scores)
@@ -37,6 +87,7 @@ evaluate <- function(df_train, df_test, ensembles){
     print("V3")
     p <- v3_fit(df_train)
     df_forecast <- V3(df_test, params=p)
+    df_forecast <- sort_quantiles(df_forecast)
     scores <- wis_table(df_forecast)
     scores$method <- "V3"
     scores_temp <- bind_rows(scores_temp, scores)  
@@ -46,6 +97,7 @@ evaluate <- function(df_train, df_test, ensembles){
     print("V4")
     p <- v4_fit(df_train)
     df_forecast <- V3(df_test, p$params, p$intercept)
+    df_forecast <- sort_quantiles(df_forecast)
     scores <- wis_table(df_forecast)
     scores$method <- "V4"
     scores_temp <- bind_rows(scores_temp, scores)  
@@ -55,6 +107,7 @@ evaluate <- function(df_train, df_test, ensembles){
     print("QRA2")
     p <- qra2_fit(df_train)
     df_forecast <- QRA2(df_test, params=p)
+    df_forecast <- sort_quantiles(df_forecast)
     scores <- wis_table(df_forecast)
     scores$method <- "QRA2"
     scores_temp <- bind_rows(scores_temp, scores)  }
@@ -63,6 +116,7 @@ evaluate <- function(df_train, df_test, ensembles){
     print("QRA3")
     p <- qra3_fit(df_train)
     df_forecast <- QRA3(df_test, params=p)
+    df_forecast <- sort_quantiles(df_forecast)
     scores <- wis_table(df_forecast)
     scores$method <- "QRA3"
     scores_temp <- bind_rows(scores_temp, scores)
@@ -72,6 +126,7 @@ evaluate <- function(df_train, df_test, ensembles){
     print("QRA4")
     p <- qra4_fit(df_train)
     df_forecast <- QRA4(df_test, p$params, p$intercepts)
+    df_forecast <- sort_quantiles(df_forecast)
     scores <- wis_table(df_forecast)
     scores$method <- "QRA4"
     scores_temp <- bind_rows(scores_temp, scores)
@@ -82,6 +137,7 @@ evaluate <- function(df_train, df_test, ensembles){
     groups <- get_quantile_groups()
     p <- gqra2_fit(df_train, groups)
     df_forecast <- GQRA_3(df_test, groups, p)
+    df_forecast <- sort_quantiles(df_forecast)
     scores <- wis_table(df_forecast)
     scores$method <- "GQRA2"
     scores_temp <- bind_rows(scores_temp, scores)
@@ -92,6 +148,7 @@ evaluate <- function(df_train, df_test, ensembles){
     groups <- get_quantile_groups()
     p <- gqra3_fit(df_train, groups)
     df_forecast <- GQRA_3(df_test, groups, p)
+    df_forecast <- sort_quantiles(df_forecast)
     scores <- wis_table(df_forecast)
     scores$method <- "GQRA3"
     scores_temp <- bind_rows(scores_temp, scores)
@@ -102,6 +159,7 @@ evaluate <- function(df_train, df_test, ensembles){
     groups <- get_quantile_groups()
     p <- gqra4_fit(df_train, groups)
     df_forecast <- GQRA_4(df_test, groups, p$params, p$intercepts)
+    df_forecast <- sort_quantiles(df_forecast)
     scores <- wis_table(df_forecast)
     scores$method <- "GQRA4"
     scores_temp <- bind_rows(scores_temp, scores)
