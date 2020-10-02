@@ -158,7 +158,7 @@ ggplot(data = subset(results, location == 'US'),
   stat_summary(fun.y=mean, geom="point", shape=3) +
   scale_fill_viridis(discrete = TRUE, alpha=0.5) +
   theme(legend.position = "none") +
-  labs(title= "US",
+  labs(title= "WIS by window size (national level)",
        x = "Model",
        y = "WIS")
 
@@ -171,7 +171,7 @@ ggplot(data = subset(results, location == 'US'),
   stat_summary(fun.y=mean, geom="point", shape=3) +
   scale_fill_viridis(discrete = TRUE, alpha=0.5) +
   theme(legend.position = "none") +
-  labs(title= "US",
+  labs(title= "WIS by ensemble method (national level)",
        x = "Window Size",
        y = "WIS")
 
@@ -193,7 +193,7 @@ ggplot(data = subset(results, location != 'US'),
   geom_boxplot(outlier.shape=NA) +
   stat_summary(fun.y=mean, geom="point", shape=3) +
   scale_fill_viridis(discrete = TRUE, alpha=0.5) +
-  ylim(100, 500) +
+  ylim(0, 200) +
   theme(legend.position = "none") +
   labs(title= "States",
        x = "Window Size",
@@ -433,19 +433,30 @@ plot_scores(results, 'QRA4', '36', ylim = c(0, 1300))
 results_long <- pivot_longer(results, cols=c("wgt_pen_u", "wgt_iw", "wgt_pen_l"),
                              names_to="penalty")
 
-ggplot(subset(results_long, value >= 0), 
+ggplot(subset(results_long, location=='US'), 
        aes(x=window_size, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
   facet_wrap(~method) +
   geom_bar(position="stack", stat="identity") +
   theme(axis.text.x=element_text(angle=0,hjust=0)) +
   scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
                      labels = c("Overprediction", "Dispersion", "Underprediction")) +
-  labs(title= "WIS decomposition by window size",
-       x = "Model",
+  labs(title= "WIS decomposition (national level)",
+       x = "Window Size",
+       y = "WIS")
+
+ggplot(subset(results_long, location=='US'& target_end_date > '2020-08-01'), 
+       aes(x=window_size, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  facet_wrap(~method) +
+  geom_bar(position="stack", stat="identity") +
+  theme(axis.text.x=element_text(angle=0,hjust=0)) +
+  scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
+                     labels = c("Overprediction", "Dispersion", "Underprediction")) +
+  labs(title= "WIS decomposition (national level) - after data revision from 2020-08-01",
+       x = "Window Size",
        y = "WIS") #+
   #ylim(0, 160000)
 
-ggplot(subset(results_long, value >= 0), 
+ggplot(subset(results_long, window_size==4), 
        aes(x=method, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
   facet_wrap(~location, scales="free_y") +
   geom_bar(position="stack", stat="identity") +
@@ -467,9 +478,9 @@ ggplot(subset(results_long, location!="US" & value >= 0 & window_size == 4),
        x = "Model",
        y = "WIS")
 
-ggplot(subset(results_long, location=="US" & value >= 0 & window_size == 3), 
+ggplot(subset(results_long, location!="US" & window_size == 4), 
        aes(x=method, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
-  facet_wrap(~target_end_date, scales='free_y') +
+  #facet_wrap(~target_end_date, scales='free_y') +
   geom_bar(position="stack", stat="identity") +
   theme(axis.text.x=element_text(angle=90,hjust=1)) +
   scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
@@ -478,6 +489,18 @@ ggplot(subset(results_long, location=="US" & value >= 0 & window_size == 3),
        x = "Model",
        y = "WIS")# +
   #ylim(0, 10000)
+
+
+ggplot(subset(results_long, location=="US" & target_end_date > '2020-08-01' & window_size == 4), 
+       aes(x=method, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  facet_wrap(~target_end_date, scales='free_y') +
+  geom_bar(position="stack", stat="identity") +
+  theme(axis.text.x=element_text(angle=90,hjust=1)) +
+  scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
+                     labels = c("Overprediction", "Dispersion", "Underprediction")) +
+  labs(title= "WIS decomposition on state level (window size 4)",
+       x = "Model",
+       y = "WIS")
 
 # PIT HISTOGRAMS
 
@@ -500,9 +523,13 @@ pit_histogram <- function(df){
 
 df <- results
 
+
+ids <- df %>%
+  select(method | location | target_end_date)
+
 df <- df %>%
-  select(method | location | target_end_date | starts_with('value') | truth)
-df <- data.frame(1*sapply(subset(df, select=-c(method, location, target_end_date, truth)), 
+  select(starts_with('value') | truth)
+df <- data.frame(1*sapply(subset(df, select=-c(truth)), 
                           function(x) x >= df$truth))
 for (i in rev(2:(ncol(df)))){
   df[, i] = (df[, i] - df[, i-1])
@@ -510,9 +537,37 @@ for (i in rev(2:(ncol(df)))){
 
 df$value.1 <- 1- rowSums(df)
 
-df %>%
+
+#a <- df[rowSums(df<0)>=1 , ]
+
+df <- cbind(ids, df)
+
+df <- df %>%
+  select(-c(location, target_end_date)) %>%
   group_by(method) %>%
-  summarise_all(sum)
+  summarise_all(mean)
+
+df <- df %>%
+  mutate(value.0.05 = value.0.01 + value.0.025 + value.0.05) %>%
+  mutate(value.1 = value.1 + value.0.99 + value.0.975) %>%
+  select(-c(value.0.01, value.0.025, value.0.99, value.0.975))
+
+df
+df_long <- pivot_longer(df, !method)
+quantiles <- seq(0.05, 1, 0.05)
+df_long$quantile <- rep(quantiles, length(unique(df_long$method)))
+
+df_long
+
+width <- 0.05
+ggplot(data=df_long, aes(x=quantile, y=value/width, width=width)) +
+  facet_wrap(~method) +
+  geom_bar(stat="identity", position = position_nudge(x = -width/2),
+           fill=viridis(3)[2]) +
+  labs(x='Probability Integral Transform',
+       y='Density') +
+  geom_segment(aes(x=0,xend=1,y=1,yend=1), linetype="dashed", color=viridis(3)[1])
+
 
 
 
@@ -545,12 +600,54 @@ pit_histogram <- function(df){
   
 }
 
-pit_histogram(subset(results, location!='US' & method=='QRA3'))
+#combine outer bins
+pit_histogram <- function(df){
+  df <- df %>%
+    select(starts_with('value') | truth)
+  
+  df <- data.frame(1*sapply(subset(df, select=-c(truth)), 
+                            function(x) x >= df$truth))
+  for (i in rev(2:(ncol(df)))){
+    df[, i] = (df[, i] - df[, i-1])
+  }
+  
+  df$value.1 <- 1- rowSums(df)
+  
+  df <- data.frame(colMeans(df))
+  colnames(df) <- 'value'
+  
+  quantiles <- c(get_quantile_levels(), 1)
+  
+  df$quantile <- quantiles
+  
 
-a <- subset(results, method=='QRA3')
+  df[3, 1] <- sum(head(df$value, 3))
+  df[nrow(df), 1] <- sum(tail(df$value, 3))
+  df <- df[-c(1, 2, nrow(df)-1, nrow(df)-2), ]
+  
+  width <- 0.05
+  ggplot(data=df, aes(x=quantile, y=value/width, width=width)) +
+    geom_bar(stat="identity", position = position_nudge(x = -width/2),
+             fill=viridis(3)[2]) +
+    labs(x='Probability Integral Transform',
+         y='Density') +
+    geom_segment(aes(x=0,xend=1,y=1,yend=1), linetype="dashed", color=viridis(3)[1])
+  
+  
+}
+
+pit_histogram(subset(results, location=='US' & method=='GQRA3' & target_end_date > '2020-08-01'))
+pit_histogram(subset(results, location=='US' & method=='GQRA4' & window_size==4))
+View(results[545, ])
+
+quantiles <- c(get_quantile_levels(), 1)
+widths <- c(0.01, diff(quantiles))
+
+
+a <- subset(results, method=='GQRA3')
 pit_histogram(a)
 
-a <- subset(results, method=='QRA3')
+a <- subset(results, location=='US' & method=='QRA3')
 a <- a %>%
   select(starts_with('value') | truth)
 
@@ -571,8 +668,13 @@ quantiles <- c(get_quantile_levels(), 1)
                
 c$quantile <- quantiles
 
-widths <- c(0.01, diff(quantiles))
-ggplot(data=c, aes(x=quantile, y=value, width=widths)) +
+c[3, 1] <- sum(head(c$value, 3))
+c[nrow(c), 1] <- sum(tail(c$value), 3)
+c[-c(1, 2, nrow(c)-1, nrow(c)-2), ]
+
+
+width <- 0.05
+ggplot(data=c, aes(x=quantile, y=value, width=width)) +
   geom_bar(stat="identity", position = position_nudge(x = -c(0.01, diff(quantiles))/2)) +
   labs(x='Probability Integral Transform',
        y='Relative Frequency')
@@ -613,12 +715,12 @@ coverage_plot <- function(df){
   df_temp <- data.frame(1*sapply(subset(df_temp, select=-c(truth)), 
                             function(x) x >= df$truth))
   
-  df_temp$value.1 <- 1*(df$value.0.99 < df$truth)
+  #df_temp$value.1 <- 1*(df$value.0.99 < df$truth)
   
   df_temp <- data.frame(colMeans(df_temp))
   colnames(df_temp) <- 'value'
   
-  quantiles <- c(get_quantile_levels(), 1)
+  quantiles <- c(get_quantile_levels())
   
   df_temp$quantile <- quantiles
   #widths <- c(0.01, diff(quantiles))
@@ -632,4 +734,6 @@ coverage_plot <- function(df){
   
 }
 
+
+coverage_plot(subset(results, location=='US' & method=='V4' & target_end_date > '2020-08-01'))
 coverage_plot(subset(results, location=='US' & method=='QRA3'))
