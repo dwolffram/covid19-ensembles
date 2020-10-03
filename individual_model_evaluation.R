@@ -1,6 +1,9 @@
 test_dates <- as.list(possible_dates[(4+1):length(possible_dates)])
 df_test <- subset(df, target_end_date %in% test_dates)
 
+individual_results  <- wis_table(df_test)
+write.csv(individual_results, 'results/individual_results.csv', row.names=FALSE)
+
 results <- wis_table(df_test)
 
 mean_wis_df <- results %>%

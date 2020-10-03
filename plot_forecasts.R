@@ -46,7 +46,8 @@ plot_forecast(data)
 plot_forecast <- function(data, incidence=FALSE, title=NULL){
   if (incidence){
     data <- data %>% 
-      group_by(method) %>%
+      #group_by(method, scales="free_y") %>%
+      group_by(location_name) %>%
       mutate(value.0.5 = value.0.5 - lag(truth)) %>%
       mutate(value.0.05 = value.0.05 - lag(truth)) %>%
       mutate(value.0.95 = value.0.95 - lag(truth)) %>%
@@ -55,8 +56,8 @@ plot_forecast <- function(data, incidence=FALSE, title=NULL){
       mutate(truth=c(NA, diff(truth)))
   }
   ggplot(data, aes(x=target_end_date, y=truth)) +
-    facet_wrap(~method) +
-    #facet_wrap(~location, scales="free_y") +
+    #facet_wrap(~method) +
+    facet_wrap(~location_name, scales="free_y") +
     geom_smooth(aes(y = data$value.0.5, ymin = data$value.0.05, ymax = data$value.0.95), 
                 linetype=2, size=0.5, fill=cols[2], alpha=1, stat = "identity") +
     geom_smooth(aes(y = data$value.0.5, ymin = data$value.0.25, ymax = data$value.0.75),
@@ -70,8 +71,19 @@ plot_forecast <- function(data, incidence=FALSE, title=NULL){
          x = "Date",
          y = "Deaths")
 }
+
+data <- subset(individual_results, location=="US")
+data <- subset(results, location=="US" & window_size==4)
+
+data <- subset(individual_results, method=="COVIDhub-baseline")
+data <- subset(individual_results, method=="YYG-ParamSearch")
+
 plot_forecast(data, incidence=TRUE, 
-              title="1 week ahead ensemble forecasts with 50%- and 90%-prediction intervals (national level)")
+              title="1 week ahead individual forecasts with 50%- and 90%-prediction intervals (national level)")
+  #theme(text = element_text(size = 25)) 
+
+plot_forecast(data, incidence=TRUE, 
+              title="YYG-ParamSearch forecasts with 50%- and 90%-prediction intervals (national level)")
 
 data <- subset(results, location=="US" & window_size==4)
 

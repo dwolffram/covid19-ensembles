@@ -3,7 +3,7 @@ library(tidyverse)
 library(dplyr)
 library(viridis)
 
-results = read.csv('results/results_2020-09-23.csv',
+results = read.csv('results/results_2020-10-02_fixed.csv',
                    colClasses = c(window_size = "factor", target_end_date = "Date"))
 
 results = read.csv('results/results_2020-09-26_train_without_us.csv',
@@ -521,11 +521,61 @@ pit_histogram <- function(df){
 
 }
 
+
+
+plot_pit_histograms <- function(df){
+  ids <- df %>%
+    select(method | location | target_end_date)
+  
+  df <- df %>%
+    select(starts_with('value') | truth)
+  df <- data.frame(1*sapply(subset(df, select=-c(truth)), 
+                            function(x) x >= df$truth))
+  for (i in rev(2:(ncol(df)))){
+    df[, i] = (df[, i] - df[, i-1])
+  }
+  
+  df$value.1 <- 1- rowSums(df)
+  
+  df <- cbind(ids, df)
+  
+  df <- df %>%
+    select(-c(location, target_end_date)) %>%
+    group_by(method) %>%
+    summarise_all(mean)
+  
+  df <- df %>%
+    mutate(value.0.05 = value.0.01 + value.0.025 + value.0.05) %>%
+    mutate(value.1 = value.1 + value.0.99 + value.0.975) %>%
+    select(-c(value.0.01, value.0.025, value.0.99, value.0.975))
+  
+  df[, seq(3, ncol(df), 2)] = (df[, seq(3, ncol(df), 2)] + df[, seq(2, ncol(df), 2)])
+  df <- df[, seq(1, ncol(df), 2)]
+  
+  df_long <- pivot_longer(df, !method)
+  quantiles <- seq(0.1, 1, 0.1)
+  
+  df_long$quantile <- rep(quantiles, length(unique(df_long$method)))
+  
+  width <- 0.1
+  ggplot(data=df_long, aes(x=quantile, y=value/width, width=width)) +
+    facet_wrap(~method) +
+    geom_bar(stat="identity", position = position_nudge(x = -width/2),
+             fill=viridis(3)[2]) +
+    labs(x='Probability Integral Transform',
+         y='Density') +
+    geom_segment(aes(x=0,xend=1,y=1,yend=1), linetype="dashed", color=viridis(3)[1])
+}
+
+plot_pit_histograms(subset(results, location=='US'))
+plot_pit_histograms(subset(results, location=='US' & target_end_date > '2020-08-01'))
+
+
+
 df <- results
 
-
 ids <- df %>%
-  select(method | location | target_end_date)
+  select(method | location | target_end_date | window_size)
 
 df <- df %>%
   select(starts_with('value') | truth)
@@ -544,7 +594,7 @@ df <- cbind(ids, df)
 
 df <- df %>%
   select(-c(location, target_end_date)) %>%
-  group_by(method) %>%
+  group_by(method, window_size) %>%
   summarise_all(mean)
 
 df <- df %>%
@@ -552,16 +602,29 @@ df <- df %>%
   mutate(value.1 = value.1 + value.0.99 + value.0.975) %>%
   select(-c(value.0.01, value.0.025, value.0.99, value.0.975))
 
-df
-df_long <- pivot_longer(df, !method)
+df[, seq(3, ncol(df), 2)] = (df[, seq(3, ncol(df), 2)] + df[, seq(2, ncol(df), 2)])
+df <- df[, seq(1, ncol(df), 2)]
+
+df[, seq(4, ncol(df), 2)] = (df[, seq(4, ncol(df), 2)] + df[, seq(3, ncol(df), 2)])
+df <- df[, c(1, 2, seq(4, ncol(df), 2))]
+
+df <- df[, 2:ncol(df)]
+(df[1:(ncol(df)-1)] + df[2:ncol(df)])[c(T,F)]
+df[, c(TRUE,FALSE)]
+(df[, seq(2, ncol(df), 2)] + df[, seq(1, ncol(df), 2)])
+
+
+
+
+df_long <- pivot_longer(df, !c(method, window_size))
 quantiles <- seq(0.05, 1, 0.05)
-df_long$quantile <- rep(quantiles, length(unique(df_long$method)))
+quantiles <- seq(0.1, 1, 0.1)
 
-df_long
+df_long$quantile <- rep(quantiles, length(unique(df_long$method))*length(unique(df_long$window_size)))
 
-width <- 0.05
+width <- 0.1
 ggplot(data=df_long, aes(x=quantile, y=value/width, width=width)) +
-  facet_wrap(~method) +
+  facet_grid(method~window_size) +
   geom_bar(stat="identity", position = position_nudge(x = -width/2),
            fill=viridis(3)[2]) +
   labs(x='Probability Integral Transform',
@@ -569,6 +632,8 @@ ggplot(data=df_long, aes(x=quantile, y=value/width, width=width)) +
   geom_segment(aes(x=0,xend=1,y=1,yend=1), linetype="dashed", color=viridis(3)[1])
 
 
+plot_pit_histograms(results)
+plot_pit_histograms(subset(results, location=='US' & target_end_date > '2020-08-01'))
 
 
 pit_histogram <- function(df){
@@ -637,7 +702,7 @@ pit_histogram <- function(df){
 }
 
 pit_histogram(subset(results, location=='US' & method=='GQRA3' & target_end_date > '2020-08-01'))
-pit_histogram(subset(results, location=='US' & method=='GQRA4' & window_size==4))
+pit_histogram(subset(results_new, location=='US' & method=='GQRA4' & window_size==4))
 View(results[545, ])
 
 quantiles <- c(get_quantile_levels(), 1)
@@ -688,24 +753,6 @@ ggplot(a, aes(x=bin)) + geom_bar()
 
 
 
-coverage_plot <- function(wis_tab){
-
-  coverage_levels <- c(0:9/10, 0.95, 0.98)
-  emp_coverage <- numeric(length(coverage_levels))
-  for(i in seq(coverage_levels)){
-    emp_coverage[i] <-
-      mean(
-        wis_tab$truth < wis_tab[, paste0("value.", 1 - (1 - coverage_levels[i])/2)] &
-          wis_tab$truth > wis_tab[, paste0("value.", (1 - coverage_levels[i])/2)],
-        na.rm = TRUE
-      )
-  }
-  plot(coverage_levels, emp_coverage, type = "l", xlab = "nominal coverage of PI",
-       ylab = "empirical coverage", xlim = 0:1, ylim = 0:1)
-  abline(0:1, lty = 2)
-}
-
-coverage_plot(subset(results, location=='US' & method=='QRA3'))
 
 
 coverage_plot <- function(df){

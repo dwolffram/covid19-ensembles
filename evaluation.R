@@ -111,3 +111,36 @@ file_name <- paste0("results/results_", Sys.Date(), "_train_without_us.csv")
 #file_name <- paste0("results/results_2020-08-08_train_without_us.csv")
 
 write.csv(results, file_name, row.names=FALSE)
+
+
+
+
+### FIX SORTING
+gqra4_df <- subset(results, method=='GQRA4')
+gqra4_df <- gqra4_df %>%
+  select(-c(starts_with('wgt') | wis))
+gqra4_df <- pivot_longer(gqra4_df, -c(target_end_date, location, target, truth, method, window_size),
+                         names_to = 'quantile')
+
+gqra4_df <- gqra4_df %>% 
+  group_by(target_end_date, location, target, window_size) %>%
+  mutate(value = sort(value)) %>%
+  as.data.frame()
+
+gqra4_df$quantile <- str_remove(gqra4_df$quantile, 'value.')
+scores <- wis_table(gqra4_df)
+
+scores <- scores %>% 
+  select(-c(method, window_size), c(method, window_size))
+  
+  
+results_new <- subset(results, method!='GQRA4')
+results_new <- bind_rows(results_new, scores)
+
+sum(results$wgt_iw_0.3 < 0, na.rm=TRUE)
+sum(results_new$wgt_iw_0.3 < 0, na.rm=TRUE)
+
+sum(results$wgt_iw < 0, na.rm=TRUE)
+
+write.csv(results_new, 'results/results_2020-10-02_fixed.csv', row.names=FALSE)
+
