@@ -1,14 +1,15 @@
+### SETTINGS
+# theme_set(theme_gray(base_size = 8))
+# theme_set(theme(plot.title= element_text(size=9),
+#         axis.text = element_text(size = 5)))
+cols <- colorRampPalette(c("deepskyblue4", "lightgrey"))(2 + 1)[-1]
+
+
 ### LOAD FILEs
 
 locations <- read.csv('data/locations.csv')
 locations <- locations %>%
   select(-c(abbreviation))
-
-p <- round(unique(results$population)/1000)*1000
-
-results$population <- cut(p, breaks=quantile(p, probs=seq(0,1, length  = 11), na.rm=TRUE),include.lowest=TRUE)
-
-results$population <- ntile(results$population, 10)
 
 results <- read.csv('results/results_2020-10-02_fixed.csv',
                    colClasses = c(window_size = "factor", target_end_date = "Date"))
@@ -26,6 +27,11 @@ individual_results <- individual_results %>%
 
 individual_results <- left_join(individual_results, locations, by='location')
 
+# p <- round(unique(results$population)/1000)*1000
+# 
+# results$population <- cut(p, breaks=quantile(p, probs=seq(0,1, length  = 11), na.rm=TRUE),include.lowest=TRUE)
+# 
+# results$population <- ntile(results$population, 10)
 
 results$method <- factor(results$method, levels=c('EWA', 'MED', 'V2', 'V3', 'V4', 
                                                   'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4'))
@@ -49,12 +55,17 @@ results_with_baseline$method <- factor(results_with_baseline$method,
 unique(results_with_baseline$method)
 
 results <- results_with_baseline
+results <- individual_results
 
 l <- unique(results$location_name)
 l <- c(as.character(l[l!='US']), 'US')
 results$location_name <- factor(results$location_name, levels=l)
+individual_results$location_name <- factor(individual_results$location_name, levels=l)
 
 results_long <- pivot_longer(results, cols=c("wgt_pen_u", "wgt_iw", "wgt_pen_l"),
+                             names_to="penalty")
+
+results_individual_long <- pivot_longer(individual_results, cols=c("wgt_pen_u", "wgt_iw", "wgt_pen_l"),
                              names_to="penalty")
 
 ### BOXPLOTS
@@ -98,8 +109,8 @@ ggplot(data = subset(results, location == 'US' & target_end_date > '2020-08-01')
 # after revision
 ggplot(data = subset(results, location == 'US'& target_end_date > '2020-08-01'), 
        aes(x = window_size, y = wis, fill=window_size)) +
-  facet_wrap(~method) +
-  geom_boxplot(outlier.shape=NA) +
+  facet_wrap(~method, ncol=4, dir='v') +
+  geom_boxplot() +
   stat_summary(fun.y=mean, geom="point", shape=3) +
   scale_fill_viridis(discrete = TRUE, alpha=0.5) +
   theme(legend.position = "none") +
@@ -121,7 +132,7 @@ ggplot(data = subset(results, location == 'US' & window_size == 4),
 
 ggplot(data = subset(results, location == 'US' & window_size == 4 & target_end_date>'2020-08-01'), 
        aes(x = method, y = wis, fill=method)) +
-  geom_boxplot(outlier.shape=NA) +
+  geom_boxplot() +
   stat_summary(fun.y=mean, geom="point", shape=3) +
   scale_fill_viridis(discrete = TRUE, alpha=0.5) +
   theme(legend.position = "none") +
@@ -129,32 +140,64 @@ ggplot(data = subset(results, location == 'US' & window_size == 4 & target_end_d
        x = "Model",
        y = "WIS")
 
+ggplot(data = subset(results, location != 'US' & window_size == 4), 
+       aes(x = method, y = wis, fill=method)) +
+  #geom_boxplot(outlier.shape=NA) +
+  geom_boxplot() +
+  stat_summary(fun.y=mean, geom="point", shape=3) +
+  scale_fill_viridis(discrete = TRUE, alpha=0.5) +
+  theme(legend.position = "none") +
+  labs(title= "WIS on state level (window size 4)",
+       x = "Model",
+       y = "WIS")
+
+ggplot(data = subset(results, location != 'US' & window_size == 4 & target_end_date>'2020-08-01'), 
+       aes(x = method, y = wis, fill=method)) +
+  geom_boxplot() +
+  stat_summary(fun.y=mean, geom="point", shape=3) +
+  scale_fill_viridis(discrete = TRUE, alpha=0.5) +
+  theme(legend.position = "none") +
+  labs(title= "Window size 4 (state level) - after data revision from 2020-08-01",
+       x = "Model",
+       y = "WIS")
 
 
 ### WIS DECOMPOSITION
 
 
 # national level
-ggplot(subset(results_long, location=='US'), 
+ggplot(subset(results_long, location!='US' & target_end_date > '2020-08-01'), 
        aes(x=window_size, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
-  facet_wrap(~method) +
+  facet_wrap(~method, ncol=4, dir='v') +
   geom_bar(position="stack", stat="identity") +
   theme(axis.text.x=element_text(angle=0,hjust=0)) +
   scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
                      labels = c("Overprediction", "Dispersion", "Underprediction")) +
-  labs(title= "WIS decomposition (national level)",
+  labs(title= "WIS decomposition (states level) - after data revision from 2020-08-01",
        x = "Window Size",
-       y = "WIS")
+       y = "WIS") +
+  theme_grey(base_size=8)+
+  theme(plot.title= element_text(size=9),
+        axis.text = element_text(size = 4))
 
-ggplot(subset(results_long, location=='US' & window_size==4), 
+ggsave('plots/ensemble_methods/wis_byEnsemble_ws_states_after_0801.png', width=11, height=7, dpi=500, unit='cm', device='png')
+
+
+ggplot(subset(results_long, window_size==4 & target_end_date > '2020-08-01'), 
        aes(x=method, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
   geom_bar(position="stack", stat="identity") +
   theme(axis.text.x=element_text(angle=0,hjust=0)) +
   scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
                      labels = c("Overprediction", "Dispersion", "Underprediction")) +
-  labs(title= "WIS decomposition on national level (window size 4)",
+  labs(title= "WIS decomposition (window size 4) - after 2020-08-01",
        x = "Window Size",
-       y = "WIS")
+       y = "WIS")+
+  theme_grey(base_size=8)+
+  theme(plot.title= element_text(size=9),
+        axis.text = element_text(size = 4))
+
+ggsave('plots/ensemble_methods/wis_ws4_all_after_0801.png', width=11, height=7, dpi=500, unit='cm', device='png')
+
 
 ggplot(subset(results_long, location!='US' & window_size==4), 
        aes(x=method, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
@@ -164,7 +207,13 @@ ggplot(subset(results_long, location!='US' & window_size==4),
                      labels = c("Overprediction", "Dispersion", "Underprediction")) +
   labs(title= "WIS decomposition on state level (window size 4)",
        x = "Window Size",
-       y = "WIS")
+       y = "WIS") +
+  theme_grey(base_size=8)+
+  theme(plot.title= element_text(size=9),
+        axis.text = element_text(size = 4))
+
+ggsave('plots/ensemble_methods/wis_byEnsemble_ws_states.png', width=11, height=7, dpi=500, unit='cm', device='png')
+
 
 
 # national level after 2020-08-01
@@ -189,6 +238,17 @@ ggplot(subset(results_long, location!="US"),
   scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
                      labels = c("Overprediction", "Dispersion", "Underprediction")) +
   labs(title= "WIS decomposition on state level (window size 4)",
+       x = "Model",
+       y = "WIS")
+
+ggplot(subset(results_individual_long, location == 'US' & target_end_date > '2020-08-01'), 
+       aes(x=method, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  #facet_wrap(~target_end_date, scales='free_y') +
+  geom_bar(position="stack", stat="identity") +
+  theme(axis.text.x=element_text(angle=90,hjust=1)) +
+  scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
+                     labels = c("Overprediction", "Dispersion", "Underprediction")) +
+  labs(title= "WIS decomposition (national level) - after 2020-08-01",
        x = "Model",
        y = "WIS")
 
@@ -241,14 +301,14 @@ ggplot(subset(results_long, window_size==4 & location!='US'),
        x = "Model",
        y = "WIS")
 
-ggplot(subset(results_long, window_size==4 & location!='US' & target_end_date>'2020-08-08'), 
+ggplot(subset(results_long, window_size==4), 
        aes(x=method, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
   facet_wrap(~location_name) +
   geom_bar(position="stack", stat="identity") +
   theme(axis.text.x=element_text(angle=90,hjust=1)) +
   scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
                      labels = c("Overprediction", "Dispersion", "Underprediction")) +
-  labs(title= "WIS Decomposition by State and Ensemble Method",
+  labs(title= "WIS by State and Ensemble Method",
        x = "Model",
        y = "WIS")
 
@@ -264,16 +324,42 @@ ggplot(subset(results_long, location!="US" & window_size == 4),
                      labels = c("Overprediction", "Dispersion", "Underprediction")) +
   labs(title= "WIS decomposition on state level (window size 4)",
        x = "Model",
-       y = "WIS")
+       y = "WIS") +
+  theme_grey(base_size=8)+
+  theme(plot.title= element_text(size=9),
+        axis.text = element_text(size = 4))
 
-ggplot(subset(results_long, location=="US" & window_size==4), 
+ggsave('plots/ensemble_methods/wis_byDate_ws4_us.png', width=11, height=7, dpi=500, unit='cm', device='png')
+
+
+ggplot(subset(results_long, window_size==4), 
        aes(x=method, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
   facet_wrap(~target_end_date, scales='free_y') +
   geom_bar(position="stack", stat="identity") +
   theme(axis.text.x=element_text(angle=90,hjust=1)) +
   scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
                      labels = c("Overprediction", "Dispersion", "Underprediction")) +
-  labs(title= "WIS decomposition on national level (window size 4)",
+  labs(title= "WIS over time (window size 4)",
        x = "Model",
-       y = "WIS")# +
-#ylim(0, 10000)
+       y = "WIS") 
+
+
+ggplot(subset(results_individual_long), 
+       aes(x=method, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  facet_wrap(~target_end_date, scales='free_y') +
+  geom_bar(position="stack", stat="identity") +
+  theme(axis.text.x=element_text(angle=90,hjust=1)) +
+  scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
+                     labels = c("Overprediction", "Dispersion", "Underprediction")) +
+  labs(title= "Individual Models: WIS over time (window size 4)",
+       x = "Model",
+       y = "WIS") 
+
+
+# +
+#   theme_grey(base_size=6)+
+#   theme(plot.title= element_text(size=9),
+#         axis.text = element_text(size = 4),
+#         axis.text.x=element_text(angle=90,hjust=1))
+
+ggsave('plots/ensemble_methods/wis_byDate_ws4_us.png', width=11, height=7, dpi=500, unit='cm', device='png')

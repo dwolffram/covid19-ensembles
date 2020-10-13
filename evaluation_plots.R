@@ -271,15 +271,15 @@ gg_color_hue <- function(n) {
 
 
 df_rank <- results_long %>% 
-  group_by(window_size, test_date) %>%
-  arrange(window_size, test_date, wis) %>% 
+  group_by(window_size, target_end_date) %>%
+  arrange(window_size, target_end_date, wis) %>% 
   mutate(ranking = row_number())
 
 
 mean_wis_us <- results %>%
   subset(location=="US") %>%
   group_by(target_end_date, window_size, method) %>%
-  summarize(mean_wis=mean(wis))
+  summarize(mean_wis=sum(wis))
 
 
 ggplot(data = mean_wis_us, aes(x = target_end_date, mean_wis, colour = method)) +
@@ -340,7 +340,7 @@ bump_chart <- function(df_rank, windowSize="1", highlight_models=unique(df_rank$
 }
 
 bump_chart(df_rank_us, 4, c("V2", "V3","V4", "GQRA3", "QRA4"))
-bump_chart(df_rank, 4)
+bump_chart(df_rank_us, 4)
 
 bump_chart(1)
 bump_chart("4")
@@ -379,11 +379,11 @@ ggplot(truth_us, aes(x=target_end_date, y=truth)) +
 
 truth_df <- results %>%
   #subset(location!="US") %>%
-  select(c(location, target_end_date, truth)) %>%
+  select(c(location_name, target_end_date, truth)) %>%
   distinct()
 
 ggplot(truth_df, aes(x=target_end_date, y=truth)) +
-  facet_wrap(~location, scales='free') +
+  facet_wrap(~location_name, scales='free') +
   #facet_wrap(~location) +
   geom_line() +
   labs(x="Date", y="Cumulative Deaths", title="Cumulative Deaths by State")

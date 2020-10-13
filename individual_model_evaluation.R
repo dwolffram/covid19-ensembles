@@ -1,19 +1,21 @@
 test_dates <- as.list(possible_dates[(4+1):length(possible_dates)])
 df_test <- subset(df, target_end_date %in% test_dates)
 
+df_test <- arrange(df_test, model, target_end_date, location, quantile)
+
 individual_results  <- wis_table(df_test)
 write.csv(individual_results, 'results/individual_results.csv', row.names=FALSE)
 
 results <- wis_table(df_test)
 
 mean_wis_df <- results %>%
-  group_by(target_end_date, model) %>%
+  group_by(target_end_date, method) %>%
   summarize(mean_wis=mean(wis))
 
-ggplot(data = mean_wis_df, aes(x = target_end_date, y = mean_wis, colour = model)) +
+ggplot(data = mean_wis_df, aes(x = target_end_date, y = mean_wis, colour = method)) +
   geom_line() 
 
-ggplot(data = results, aes(x = target_end_date, y = wis, colour = model)) +
+ggplot(data = results, aes(x = target_end_date, y = wis, colour = method)) +
   facet_wrap(~location, scales="free") +
   geom_line() +
   labs(title= "WIS by State over Time",
@@ -24,7 +26,7 @@ ggplot(data = results, aes(x = target_end_date, y = wis, colour = model)) +
 
 
 ggplot(data = subset(results, location == 'US'), 
-       aes(x = model, y = wis, fill=model)) +
+       aes(x = method, y = wis, fill=method)) +
   geom_boxplot(outlier.shape=NA) +
   stat_summary(fun.y=mean, geom="point", shape=3) +
   scale_fill_viridis(discrete = TRUE, alpha=0.5) +
@@ -34,7 +36,7 @@ ggplot(data = subset(results, location == 'US'),
        y = "WIS")
 
 ggplot(data = subset(results, location != 'US'), 
-       aes(x = model, y = wis, fill=model)) +
+       aes(x = method, y = wis, fill=method)) +
   geom_boxplot(outlier.shape=NA) +
   stat_summary(fun.y=mean, geom="point", shape=3) +
   scale_fill_viridis(discrete = TRUE, alpha=0.5) +
@@ -44,7 +46,7 @@ ggplot(data = subset(results, location != 'US'),
        y = "WIS")
 
 ggplot(data = results, 
-       aes(x = model, y = wis, fill=model)) +
+       aes(x = method, y = wis, fill=method)) +
   facet_wrap(~location, scales="free") +
   geom_boxplot(outlier.shape=NA) +
   stat_summary(fun.y=mean, geom="point", shape=3) +
@@ -72,12 +74,12 @@ empty_plot <- function(xlim, ylim, xlab, ylab){
   box()
 }
 
-plot_scores <- function(wis_tab, model, location, 
+plot_scores <- function(wis_tab, method, location, 
                         xlim = c(as.Date("2020-06-01"), 
                                  Sys.Date() + 28), ylim = c(0, 5000)){
   
   # subset to chosen target:
-  wis_tab <- wis_tab[(wis_tab$model == model) & (wis_tab$location == location), ]
+  wis_tab <- wis_tab[(wis_tab$method == method) & (wis_tab$location == location), ]
   
   empty_plot(xlab = "target end date", xlim = xlim, ylim = ylim, 
              ylab = "WIS")
@@ -94,19 +96,19 @@ plot_scores <- function(wis_tab, model, location,
          col = c("red", "royalblue1", "orange"), lwd = c(2, 2, 2, NA),
          bty = "n", cex = 0.9, pch = c(NA, NA, NA, 5))
   
-  title(main=paste(model, location, sep=' - '))
+  title(main=paste(method, location, sep=' - '))
 }
 
-unique(results$model)
+unique(results$method)
 # [1] "UCLA-SuEIR"            "YYG-ParamSearch"       "MOBS-GLEAM_COVID"      "CovidAnalytics-DELPHI"
 # [5] "LANL-GrowthRate"       "COVIDhub-baseline" 
 plot_scores(results, 'YYG-ParamSearch', 'US', ylim = c(0, 1.1))
 
 
-plot_scores <- function(wis_tab, model, location, normalize = FALSE, ylim = c(0, 5000)){
+plot_scores <- function(wis_tab, method, location, normalize = FALSE, ylim = c(0, 5000)){
   
-  # subset to chosen model and location:
-  wis_tab <- wis_tab[(wis_tab$model == model) & (wis_tab$location == location), ]
+  # subset to chosen method and location:
+  wis_tab <- wis_tab[(wis_tab$method == method) & (wis_tab$location == location), ]
   
   dates <- unique(wis_tab$target_end_date)
   
@@ -156,7 +158,7 @@ plot_scores <- function(wis_tab, model, location, normalize = FALSE, ylim = c(0,
          bty = "n", cex = 0.9, pch = c(NA, NA, NA, 5))
   
 
-  title(main=paste(model, location, sep=' - '))
+  title(main=paste(method, location, sep=' - '))
 }
 plot_scores(results, "CovidAnalytics-DELPHI", "34", normalize=TRUE)
 
@@ -165,14 +167,14 @@ results_long <- pivot_longer(results, cols=c("wgt_pen_u", "wgt_iw", "wgt_pen_l")
                              names_to="penalty")
 
 
-ggplot(results_long, aes(x=model, y=value, 
+ggplot(results_long, aes(x=method, y=value, 
                          fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) + 
   facet_wrap(~location) +
-  geom_bar(position="fill", stat="identity")
+  geom_bar(position="stack", stat="identity")
 
-ggplot(subset(results_long, location=="US"), 
-       aes(x=model, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) + 
-  geom_bar(position="fill", stat="identity") +
+ggplot(subset(results_long), 
+       aes(x=method, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) + 
+  geom_bar(position="stack", stat="identity") +
   theme(axis.text.x=element_text(angle=45,hjust=1)) +
   scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
                      labels = c("Overprediction", "Dispersion", "Underprediction")) +
@@ -180,8 +182,28 @@ ggplot(subset(results_long, location=="US"),
        x = "Model",
        y = "WIS")
 
+ggplot(subset(results_long, location=="US" & target_end_date > '2020-08-01'), 
+       aes(x=method, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) + 
+  geom_bar(position="stack", stat="identity") +
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
+                     labels = c("Overprediction", "Dispersion", "Underprediction")) +
+  labs(title= "US - after data revision from 2020-08-01",
+       x = "Model",
+       y = "WIS")
+
+ggplot(subset(results_long, target_end_date > '2020-08-01'), 
+       aes(x=method, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) + 
+  geom_bar(position="stack", stat="identity") +
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
+                     labels = c("Overprediction", "Dispersion", "Underprediction")) +
+  labs(title= "US - after data revision from 2020-08-01",
+       x = "Model",
+       y = "WIS")
+
 ggplot(results_long, 
-       aes(x=model, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+       aes(x=method, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
   facet_wrap(~location, scales="free") +
   geom_bar(position="fill", stat="identity") +
   #theme(axis.text.x=element_text(angle=45,hjust=1)) +
@@ -193,7 +215,7 @@ ggplot(results_long,
 
 ggplot(results_long, 
        aes(x=location, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
-  facet_wrap(~model, scales="free") +
+  facet_wrap(~method, scales="free") +
   geom_bar(position="fill", stat="identity") +
   theme(axis.text.x=element_text(angle=90,hjust=1)) +
   scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
@@ -203,7 +225,7 @@ ggplot(results_long,
        y = "WIS")
 
 ggplot(subset(results_long, location!="US"), 
-       aes(x=model, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+       aes(x=method, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
   geom_bar(position="stack", stat="identity") +
   theme(axis.text.x=element_text(angle=45,hjust=1)) +
   scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
@@ -214,12 +236,12 @@ ggplot(subset(results_long, location!="US"),
 
 unique(results_long$penalty)
 
-ggplot(results_long, aes(fill=penalty, y=value, x=model)) + 
+ggplot(results_long, aes(fill=penalty, y=value, x=method)) + 
   facet_wrap(~location, scales="free") +
   stat_summary(fun.y=sum,geom="bar",fill=penalty,colour="black")
   
 ggplot(subset(results_long, location=="US"), 
-       aes(x=model, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+       aes(x=method, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
   facet_wrap(~target_end_date) +
   geom_bar(position="stack", stat="identity") +
   theme(axis.text.x=element_text(angle=90,hjust=1)) +
@@ -231,7 +253,7 @@ ggplot(subset(results_long, location=="US"),
 
 ggplot(subset(results_long, location!="US" & value >= 0), 
        aes(x=target_end_date, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
-  facet_wrap(~model, scales="free_y") +
+  facet_wrap(~method, scales="free_y") +
   geom_bar(position="stack", stat="identity") +
   theme(axis.text.x=element_text(angle=45,hjust=1)) +
   scale_fill_viridis(discrete=TRUE, name = "Penalty for", 

@@ -5,7 +5,7 @@ source("ensemble_methods.R")
 source("evaluation_functions.R")
 
 
-# all_models <- list.dirs(path = "data-processed/", full.names = FALSE, recursive = FALSE)
+all_models <- list.dirs(path = "../covid19-forecast-hub/data-processed/", full.names = FALSE, recursive = FALSE)
 
 models <- c("LANL-GrowthRate", "CovidAnalytics-DELPHI", "MOBS-GLEAM_COVID", 
             "YYG-ParamSearch", "UCLA-SuEIR", "COVIDhub-baseline")
@@ -14,6 +14,22 @@ exclude_locations <- c("11", "60", "66", "69", "72", "78")
 
 
 df <- load_df(models=models, exclude_locations=exclude_locations)
+
+all_models <- all_models[all_models != 'ISUandPKU-vSEIdR']
+df <- load_df(models=all_models, exclude_locations=c())
+
+a <- subset(df, target=='4 wk ahead cum death')
+b <- a %>% 
+  group_by(model) %>%
+  summarize(c = length(unique(target_end_date)))
+
+b <- a %>% 
+  group_by(model) %>%
+  summarize(target_end_date = unique(target_end_date))
+
+c <- a %>% 
+  group_by(model, target_end_date) %>%
+  summarize(locations = length(unique(location)))
 
 
 # not all targets are always available
