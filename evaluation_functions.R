@@ -29,7 +29,7 @@ sort_quantiles <- function(df_forecast){
   return(
     df_forecast %>% 
       group_by(target_end_date, location, target) %>%
-      mutate(value = sort(value)) %>%
+      mutate(quantile = sort(quantile), value = sort(value)) %>%
       as.data.frame()
   )
 }
@@ -50,6 +50,12 @@ sort_quantiles <- function(df_forecast){
 #   left_join(truth_at_forecast_date, by=c("target_end_date"="date", "location"="location")) %>%
 #   select(-truth) %>%
 #   rename(truth = truth_at_forecast_date)
+
+e = "EWA"
+switch (e,
+  "EWA" = print("EWA"),
+  "MED" = print("MED")
+)
 
 
 evaluate <- function(df_train, df_test, ensembles){

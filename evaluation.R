@@ -1,56 +1,41 @@
 setwd("/home/dwolffram/covid19-ensembles")
 
+source("data_loading.R")
 source("functions.R")
 source("ensemble_methods.R")
 source("evaluation_functions.R")
 
+models <- c("CovidAnalytics-DELPHI", "COVIDhub-baseline", "CU-select", "JHU_IDD-CovidSP",
+            "LANL-GrowthRate", "MOBS-GLEAM_COVID", "PSI-DRAFT", "UCLA-SuEIR", 
+            "UMass-MechBayes", "YYG-ParamSearch")
 
-all_models <- list.dirs(path = "../covid19-forecast-hub/data-processed/", full.names = FALSE, recursive = FALSE)
+# DC,11,District of Columbia
+# AS,60,American Samoa
+# GU,66,Guam
+# MP,69,Northern Mariana Islands
+# PR,72,Puerto Rico
+# UM,74,U.S. Minor Outlying Islands
+# VI,78,Virgin Islands
 
-models <- c("LANL-GrowthRate", "CovidAnalytics-DELPHI", "MOBS-GLEAM_COVID", 
-            "YYG-ParamSearch", "UCLA-SuEIR", "COVIDhub-baseline")
+exclude_locations <- c("11", "60", "66", "69", "72", "74", "78")
 
-exclude_locations <- c("11", "60", "66", "69", "72", "78")
-
-
-df <- load_df(models=models, exclude_locations=exclude_locations)
-
-all_models <- all_models[all_models != 'ISUandPKU-vSEIdR']
-df <- load_df(models=all_models, exclude_locations=c())
-
-a <- subset(df, target=='4 wk ahead cum death')
-b <- a %>% 
-  group_by(model) %>%
-  summarize(c = length(unique(target_end_date)))
-
-b <- a %>% 
-  group_by(model) %>%
-  summarize(target_end_date = unique(target_end_date))
-
-c <- a %>% 
-  group_by(model, target_end_date) %>%
-  summarize(locations = length(unique(location)))
+df <- load_forecasts(models=models, targets=c("1 wk ahead cum death"),
+                     exclude_locations=exclude_locations, start_date="2020-05-23",
+                     intersect_dates=TRUE)
 
 
 # not all targets are always available
 available_targets <- df %>%
-  group_by(target_end_date, target) %>%
+  group_by(target_end_date) %>%
   summarize(model_count = length(unique(model)))
 
 # dates where all models are available for "1 wk ahead cum death"
 possible_dates <- df %>%
-  group_by(target_end_date, target) %>%
-  summarize(model_count = length(unique(model))) %>%
-  filter(target == "1 wk ahead cum death") %>%
-  filter(model_count == length(models)) %>%
-  pull(target_end_date)
+  group_by(target_end_date) %>%
+  filter(length(unique(model)) == length(models)) %>%
+  select(target_end_date) %>%
+  distinct()
 
-# a <- df %>%
-#   group_by(target_end_date, location) %>%
-#   summarize(model_count = length(unique(model))) %>%
-#   subset(model_count < 6)
-# 
-# unique(a$location)
 
 # only consider 1 week ahead forecasts and only the dates with all models available
 df <- df %>% 

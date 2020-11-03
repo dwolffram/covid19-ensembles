@@ -77,7 +77,7 @@ for (e in c(EWA, MED)){
 
 
 ### V3
-v3_df <- V3(df_test, params=rep(0.2, 6))
+v3_df <- V3(df_test, params=rep(0.1, 10))
 v3_scores <- wis_table(v3_df)
 mean(v3_scores$wis)
 
@@ -89,11 +89,32 @@ p_v3 <- v3_fit(df_train)
 v3_loss(df_test, p_v3)
 
 
+
+
 ### V4
+fit_ensemble <- function(ensemble, df_train, df_test){
+  fit_method <- paste0(tolower(ensemble), "_fit")
+  temp <- list(df=df_train)
+  p <- do.call(fit_method, temp)
+  p[["df"]] <- data.frame(df_test)
+  df_forecast <- invoke(ensemble, p)
+  return(df_forecast)
+}
+
+v4_df2 <- fit_ensemble("V4", df_train, df_test)
+
+p <- p_v4
+p[["df"]] <- data.frame(df_test)
+invoke(v3_loss, p)
+
+p <- c(df=df_test, p_v4)
+
+invoke(v3_loss, list(df=df_test, p_v4))
+
 # Set an intercept in V3
-v4_df <- V3(df_test, params=rep(0.2, 5), intercept=0)
+v4_df <- V3(df_test, params=rep(0.1, 10), intercept=0)
 mean_wis(v4_df)
-v3_loss(df_test, rep(0.2, 5), intercept=2)
+v3_loss(df_test, rep(0.1, 10), intercept=2)
 
 p_v4 <- v4_fit(df_train)
 v3_loss(df_test, p_v4$params, p_v4$intercept)
@@ -236,9 +257,13 @@ ewa_crossed <- ewa_df %>%
   group_by(target_end_date, location, target) %>%
   mutate(value = value[sample(row_number())])
 
+ewa_crossed <- ewa_crossed %>% 
+  group_by(target_end_date, location, target) %>%
+  mutate(quantile = quantile[sample(row_number())])
+
 ewa_sorted <- ewa_crossed %>% 
   group_by(target_end_date, location, target) %>%
-  mutate(value = sort(value))
+  mutate(quantile = sort(quantile), value = sort(value))
 
 a <- subset(ewa_df, target_end_date=='2020-05-30' & location=='01')
 b <- subset(ewa_crossed, target_end_date=='2020-05-30' & location=='01')
