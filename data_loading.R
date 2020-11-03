@@ -37,6 +37,11 @@ load_forecasts <- function(models='all', exclude_locations=c(), targets=paste(1:
     # all files in model folder
     model_files <- get_filenames(m)
     
+    if (length(model_files) == 0) {
+      print(paste0("No forecast files found for: ", m, "."))
+      next
+    }
+    
     df_temp <- model_files %>% 
       lapply(read_csv, 
              col_types = cols(
@@ -48,25 +53,34 @@ load_forecasts <- function(models='all', exclude_locations=c(), targets=paste(1:
                quantile = col_double(),
                value = col_double())) %>%
       bind_rows
+    
+
+    # filter forecasts
+    df_temp <- df_temp %>%
+      filter(target %in% targets,
+             !(location %in% exclude_locations),
+             type == 'quantile')
+    
+    if (nrow(df_temp) == 0) {
+      print(paste0("No relevant forecasts available for: ", m))
+      next
+    }    
+    
+    # remove multiple forecasts for same target (only keep newest one)
+    df_temp <- df_temp %>%
+      group_by(target_end_date, location, target, quantile) %>%
+      slice(which.max(forecast_date))%>%
+      as.data.frame()
+    
     df_temp$model <- m
     df <- bind_rows(df, df_temp)
   }
   
-  # filter forecasts
-  df <- df %>%
-    filter(target %in% targets,
-           !(location %in% exclude_locations),
-           type == 'quantile')
-  
-  # remove multiple forecasts for same target (only keep newest one)
-  df <- df %>%
-    group_by(model, target_end_date, location, target, quantile) %>%
-    slice(which.max(forecast_date))%>%
-    as.data.frame()
   return(df)
 }
 
-# df <- load_forecasts()
+#a <- load_forecasts(c("YYG-ParamSearch", "IBF-TimeSeries"))
+#df <- load_forecasts()
 
 load_truth <- function(as_of=''){
   if(as_of==''){
