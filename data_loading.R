@@ -23,9 +23,10 @@ get_filenames <- function(model){
 
 # get_filenames('YYG-ParamSearch')
 
-load_forecasts <- function(models='all', exclude_locations=c(), targets=paste(1:4, "wk ahead cum death")){
+load_forecasts <- function(models, exclude_locations=c(), targets=paste(1:4, "wk ahead cum death"),
+                           start_date="2019-01-01", intersect_dates=FALSE){
   
-  if(models == 'all'){
+  if(missing(models)){
     models <- get_all_models()
   }
   
@@ -59,7 +60,8 @@ load_forecasts <- function(models='all', exclude_locations=c(), targets=paste(1:
     df_temp <- df_temp %>%
       filter(target %in% targets,
              !(location %in% exclude_locations),
-             type == 'quantile')
+             type == 'quantile',
+             target_end_date >= start_date)
     
     if (nrow(df_temp) == 0) {
       print(paste0("No relevant forecasts available for: ", m))
@@ -76,10 +78,17 @@ load_forecasts <- function(models='all', exclude_locations=c(), targets=paste(1:
     df <- bind_rows(df, df_temp)
   }
   
+  if(intersect_dates){
+    df <- df %>%
+      group_by(target, target_end_date) %>%
+      filter(length(unique(model)) == length(models))
+  }
+  
   return(df)
 }
 
 #a <- load_forecasts(c("YYG-ParamSearch", "IBF-TimeSeries"))
+#a <- load_forecasts(c("YYG-ParamSearch", "IBF-TimeSeries"), start_date="2020-05-23")
 #df <- load_forecasts()
 
 load_truth <- function(as_of=''){

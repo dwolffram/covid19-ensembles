@@ -91,3 +91,6 @@ relevant_models <- relevant_models %>%
   pull(model)
 
 relevant_models
+# [1] "CovidAnalytics-DELPHI" "COVIDhub-baseline"     "CU-scenario_high"      "CU-select"            
+# [5] "JHU_IDD-CovidSP"       "LANL-GrowthRate"       "MOBS-GLEAM_COVID"      "PSI-DRAFT"            
+# [9] "UCLA-SuEIR"            "UMass-MechBayes"       "YYG-ParamSearch"
