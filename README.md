@@ -2,6 +2,12 @@
 In this repo we implement several ensemble methods for quantile forecasts and evaluate them on COVID-19 forecasts from the US Forecast Hub.
 
 **Overview:**
+* `data_loading.R`  
+Used to load and preprocess the forecast files as well as the truth data.
+
+* `data_exploration.R`  
+Here we explore forecast availability depending on target_end_date and number of locations. This is used to determine which models will be included in the ensembles.
+
 * `ensemble_methods.R`  
 Here we implement the different combination methods.
 
