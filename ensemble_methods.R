@@ -257,44 +257,7 @@ qra2_fit <- function(df){
   return(df_params)
 }
 
-# qra2_loss <- function(df, params){
-#   quantile_levels <- sort(unique(df$quantile))
-#   params <- data.frame(model=rep(models[-length(models)], each=23), 
-#                        quantile=rep(quantile_levels, length(models)-1),
-#                        param=params)
-#   df_temp <- QRA2(df, params)
-#   return(mean_wis(df_temp))
-# }
 
-
-# qra2_fit <- function(df){
-#   quantile_levels <- sort(unique(df$quantile))
-#   n_quantiles <- length(quantile_levels)
-#   models <- unique(df$model)
-#   #models <- models[-length(models)]  # drop last model
-#   n_models <- length(models) - 1
-#   
-#   # feasible region: ui %*% theta - ci >= 0
-#   r <- c(rep(0, n_models*n_quantiles), rep(-1, n_quantiles))
-#   R <- diag(n_models*n_quantiles)
-#   
-#   R_l <- matrix(0, nrow=n_quantiles, ncol=n_models*n_quantiles)
-#   for (i in 1:n_quantiles){
-#     for (j in 1:n_models){
-#       R_l[i, i + (j-1)*n_quantiles] <- - 1
-#     }
-#   }
-#   R <- rbind(R, R_l)
-#   
-#   p_optim <- constrOptim(theta = rep(1/(n_models*n_quantiles), n_models*n_quantiles), 
-#                          f = function(x){
-#                            return(qra2_loss(df, params = x))},
-#                          ui=R, ci=r, method="Nelder-Mead")$par
-#     
-#   params <- data.frame(model=rep(models, each=23), quantile=rep(quantile_levels, n_models), param=params)
-#   
-#   return(params)
-# }
 
 
 ### GQRA
