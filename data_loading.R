@@ -71,7 +71,7 @@ load_forecasts <- function(models, exclude_locations=c(), targets=paste(1:4, "wk
     # remove multiple forecasts for same target (only keep newest one)
     df_temp <- df_temp %>%
       group_by(target_end_date, location, target, quantile) %>%
-      slice(which.max(forecast_date))%>%
+      slice(which.max(forecast_date)) %>%
       as.data.frame()
     
     df_temp$model <- m
@@ -81,7 +81,8 @@ load_forecasts <- function(models, exclude_locations=c(), targets=paste(1:4, "wk
   if(intersect_dates){
     df <- df %>%
       group_by(target, target_end_date) %>%
-      filter(length(unique(model)) == length(models))
+      filter(length(unique(model)) == length(models)) %>%
+      as.data.frame()
   }
   
   return(df)

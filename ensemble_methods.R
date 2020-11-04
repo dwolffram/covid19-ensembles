@@ -2,10 +2,10 @@ library(quantreg)
 
 ### EWA
 EWA <- function(df){
-  ewa <- data.frame(
-    df %>%
-      group_by(target_end_date, location, target, quantile, truth) %>% 
-      summarize(value = mean(value)))
+  ewa <- df %>%
+    group_by(target_end_date, location, target, quantile, truth) %>% 
+    summarize(value = mean(value)) %>%
+    as.data.frame()
   return(ewa)
 }
 
@@ -16,10 +16,10 @@ ewa_loss <- function(df){
 
 ### Median
 MED <- function(df){
-  med <- data.frame(
-    df %>%
-      group_by(target_end_date, location, target, quantile, truth) %>% 
-      summarize(value = median(value)))
+  med <- df %>%
+    group_by(target_end_date, location, target, quantile, truth) %>% 
+    summarize(value = median(value))%>%
+    as.data.frame()
   return(med) 
 }
 
@@ -33,11 +33,11 @@ med_loss <- function(df){
 V3 <- function(df, params, intercept=0){
   params <- data.frame(model=models, param=params)
   df_temp <- merge(df, params, by.x = "model", by.y = "model")
-  v3 <- data.frame(
-    df_temp %>%
-      mutate(weighted_values = value * param) %>%
-      group_by(target_end_date, location, target, quantile, truth) %>% 
-      summarize(value = sum(weighted_values) + intercept))
+  v3 <- df_temp %>%
+    mutate(weighted_values = value * param) %>%
+    group_by(target_end_date, location, target, quantile, truth) %>% 
+    summarize(value = sum(weighted_values) + intercept) %>%
+    as.data.frame()
   return(v3)
 }
 
@@ -102,24 +102,13 @@ v2_fit <- function(df){
 # params: data.frame with columns model, quantile, param
 QRA3 <- function(df, params){
   df_temp <- merge(df, params, by.x = c("model", "quantile"), by.y = c("model", "quantile"))
-  qra3 <- data.frame(
-    df_temp %>%
-      mutate(weighted_values = value * param) %>%
-      group_by(target_end_date, location, target, quantile, truth) %>% 
-      summarize(value = sum(weighted_values)))
+  qra3 <- df_temp %>%
+    mutate(weighted_values = value * param) %>%
+    group_by(target_end_date, location, target, quantile, truth) %>% 
+    summarize(value = sum(weighted_values)) %>%
+    as.data.frame()
   return(qra3)
 }
-
-# QRA3 <- function(df, params){
-#   df_temp <- merge(df, params, by.x = c("model", "quantile"), by.y = c("model", "quantile"))
-#   qra3 <- data.frame(
-#     df_temp %>%
-#       mutate(weighted_values = value * param) %>%
-#       group_by(target_end_date, location, quantile, truth) %>% 
-#       summarize(value = sum(weighted_values)/n_distinct(target), .groups="keep"))
-#   return(qra3)
-# }
-
 
 qra3_fit <- function(df){
   quantile_levels <- sort(unique(df$quantile))
@@ -155,11 +144,11 @@ qra3_loss <- function(df, params){
 # intercepts: data.frame with columns: quantile, intercept
 QRA4 <- function(df, params, intercepts){
   df_temp <- merge(df, params, by.x = c("model", "quantile"), by.y = c("model", "quantile"))
-  qra4 <- data.frame(
-    df_temp %>%
-      mutate(weighted_values = value * param) %>%
-      group_by(target_end_date, location, target, quantile, truth) %>% 
-      summarize(value = sum(weighted_values)))
+  qra4 <- df_temp %>%
+    mutate(weighted_values = value * param) %>%
+    group_by(target_end_date, location, target, quantile, truth) %>% 
+    summarize(value = sum(weighted_values)) %>%
+    as.data.frame()
   qra4 <- merge(qra4, intercepts, by.x = "quantile", by.y = "quantile") %>% 
     mutate(value = value + intercept) %>% 
     select(-intercept)
@@ -232,11 +221,11 @@ QRA2 <- function(df, params){
                     mutate(model=last_param))
   
   df_temp <- merge(df, params, by.x = c("model", "quantile"), by.y = c("model", "quantile"))
-  qra2 <- data.frame(
-    df_temp %>%
-      mutate(weighted_values = value * param) %>%
-      group_by(target_end_date, location, target, quantile, truth) %>% 
-      summarize(value = sum(weighted_values)))
+  qra2 <- df_temp %>%
+    mutate(weighted_values = value * param) %>%
+    group_by(target_end_date, location, target, quantile, truth) %>% 
+    summarize(value = sum(weighted_values))%>%
+    as.data.frame()
   return(qra2)
 }
 
@@ -345,11 +334,11 @@ GQRA_3 <- function(df, groups, params){
   df_temp <- merge(df, groups, by.x = c("quantile"), by.y = c("quantile"))
   df_temp <- merge(df_temp, params, by.x = c("model", "quantile_group"), 
                    by.y = c("model", "quantile_group"))  
-  gqra3 <- data.frame(
-    df_temp %>%
-      mutate(weighted_values = value * param) %>%
-      group_by(target_end_date, location, target, quantile, truth) %>% 
-      summarize(value = sum(weighted_values)))
+  gqra3 <- df_temp %>%
+    mutate(weighted_values = value * param) %>%
+    group_by(target_end_date, location, target, quantile, truth) %>% 
+    summarize(value = sum(weighted_values)) %>%
+    as.data.frame()
   return(gqra3)
 }
 
@@ -391,11 +380,11 @@ GQRA_4 <- function(df, groups, params, intercepts){
   df_temp <- merge(df, groups, by.x = c("quantile"), by.y = c("quantile"))
   df_temp <- merge(df_temp, params, by.x = c("model", "quantile_group"), 
                    by.y = c("model", "quantile_group"))  
-  gqra4 <- data.frame(
-    df_temp %>%
-      mutate(weighted_values = value * param) %>%
-      group_by(target_end_date, location, target, quantile_group, quantile, truth) %>% 
-      summarize(value = sum(weighted_values)))
+  gqra4 <- df_temp %>%
+    mutate(weighted_values = value * param) %>%
+    group_by(target_end_date, location, target, quantile_group, quantile, truth) %>% 
+    summarize(value = sum(weighted_values)) %>%
+    as.data.frame()
   gqra4 <- merge(gqra4, intercepts, by.x = "quantile_group", by.y = "quantile_group") %>% 
     mutate(value = value + intercept) %>% 
     select(-c(intercept, quantile_group))
