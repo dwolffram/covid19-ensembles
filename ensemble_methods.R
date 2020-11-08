@@ -243,7 +243,6 @@ qra2_fit <- function(df){
   
   df_params <- data.frame()
   for (quantile_level in quantile_levels){
-    print(quantile_level)
     df_alpha <- subset(df, quantile==quantile_level)
     params <- constrOptim(theta = rep(1/n_models, n_models - 1), 
                           f = function(x){
@@ -281,22 +280,12 @@ get_quantile_groups <- function(){
   return(groups)
 }
 
-g1 <- c(0.01, 0.025, 0.05, 0.1)
-g2 <- c(0.15, 0.2, 0.25, 0.3)
-g3 <- c(0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65)
-g4 <- c(0.7, 0.75, 0.8, 0.85)
-g5 <- c(0.9, 0.95, 0.975, 0.99)
 
-groups <- data.frame(quantile=c(g1, g2, g3, g4, g5), 
-                     quantile_group=c(rep("g1", length(g1)), rep("g2", length(g2)), 
-                                      rep("g3", length(g3)), rep("g4", length(g4)), 
-                                      rep("g5", length(g5))))
 
 # params: data.frame with columns: model, quantile_group, param
 GQRA_3 <- function(df, groups, params){
-  df_temp <- merge(df, groups, by.x = c("quantile"), by.y = c("quantile"))
-  df_temp <- merge(df_temp, params, by.x = c("model", "quantile_group"), 
-                   by.y = c("model", "quantile_group"))  
+  df_temp <- merge(df, groups, by = c("quantile"))
+  df_temp <- merge(df_temp, params, by = c("model", "quantile_group"))  
   gqra3 <- df_temp %>%
     mutate(weighted_values = value * param) %>%
     group_by(target_end_date, location, target, quantile, truth) %>% 
@@ -340,15 +329,14 @@ gqra3_fit <- function(df, groups, method = "BFGS"){
 # params: data.frame with columns model, quantile_group, param
 # intercepts: data.frame with columns: quantile_group, intercept
 GQRA_4 <- function(df, groups, params, intercepts){
-  df_temp <- merge(df, groups, by.x = c("quantile"), by.y = c("quantile"))
-  df_temp <- merge(df_temp, params, by.x = c("model", "quantile_group"), 
-                   by.y = c("model", "quantile_group"))  
+  df_temp <- merge(df, groups, by = c("quantile"))
+  df_temp <- merge(df_temp, params, by = c("model", "quantile_group"))  
   gqra4 <- df_temp %>%
     mutate(weighted_values = value * param) %>%
     group_by(target_end_date, location, target, quantile_group, quantile, truth) %>% 
     summarize(value = sum(weighted_values)) %>%
     as.data.frame()
-  gqra4 <- merge(gqra4, intercepts, by.x = "quantile_group", by.y = "quantile_group") %>% 
+  gqra4 <- merge(gqra4, intercepts, by = "quantile_group") %>% 
     mutate(value = value + intercept) %>% 
     select(-c(intercept, quantile_group))
   return(gqra4)

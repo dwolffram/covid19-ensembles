@@ -58,6 +58,9 @@ wis_decomposition((ewa_df))
 
 ewa_loss(df_test)
 
+ewa_df <- aggregate(formula = value ~ target + target_end_date + location + type + quantile,
+                      data = df_test, FUN = mean)
+
 ### MED
 med_df <- MED(df_test)
 mean_wis(med_df)
@@ -131,13 +134,12 @@ v2_loss(df_test, p_v2)
 
 ### QRA3
 
-
 alphas <- c(0.02,0.05,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9)
 quantile_levels <- sort(c(unique(c(alphas/2, 1-alphas/2)),0.5))
 
 #quantile_levels1 <- c(0.01, 0.025, seq(0.05, 0.95, by = 0.05), 0.975, 0.99)
 
-params <- data.frame(model=rep(models, each=23), quantile=quantile_levels, param=rep(0.2, 6*23))
+params <- data.frame(model=rep(models, each=23), quantile=quantile_levels, param=rep(0.1, 10*23))
 
 qra3_df <- QRA3(df_test, params=params)
 

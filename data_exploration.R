@@ -4,6 +4,8 @@ library(ggplot2)
 
 df <- load_forecasts()
 
+df <- load_forecasts(targets = c("1 wk ahead inc death"))
+
 
 get_available_models <- function(df, target="1 wk ahead cum death", exclude_gaps=FALSE, 
                                  min_no_locations=50, drop_incomplete=FALSE){
@@ -77,6 +79,11 @@ plot_availability(df, target = "1 wk ahead cum death", drop_incomplete = TRUE, e
 
 plot_availability(df, target="4 wk ahead cum death")
 plot_availability(df, target="4 wk ahead cum death", drop_incomplete = TRUE, exclude_gaps = TRUE)
+
+plot_availability(df, target = "1 wk ahead inc death")
+plot_availability(df, target = "1 wk ahead inc death", exclude_gaps = TRUE)
+plot_availability(df, target = "1 wk ahead inc death", drop_incomplete = TRUE, exclude_gaps = TRUE)
+
 
 
 available_models <- get_available_models(df, target="1 wk ahead cum death", 
