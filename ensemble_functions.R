@@ -12,7 +12,7 @@ sort_quantiles <- function(df_forecast){
 train_test_split <- function(df, test_date, horizon, window_size){
   train_end = test_date - 7*horizon
   train_start = train_end - 7*(window_size - 1)
-  
+
   ### TRAINING DATA
   df_train = subset(df, (target_end_date >= train_start) & (target_end_date <= train_end))
   
@@ -49,12 +49,10 @@ ensemble_forecasts <- function(df, dates, window_sizes, ensembles=c("EWA"),
                                exclude_us_from_training=FALSE){
   
   horizon <- as.numeric(substr(unique(df$target), 1, 1)) # first character of target is the horizon
-  
-  
+
   if(missing(dates)){
     dates <- unique(df$target_end_date)
   }
-  print(dates)
    
   df_ensembles <- data.frame()
   

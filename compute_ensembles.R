@@ -36,10 +36,10 @@ ensembles <- c("EWA", "MED", "V2", "V3", "V4", "QRA2", "QRA3",
                "QRA4", "GQRA2", "GQRA3", "GQRA4")
 window_sizes <- 1:4
 
-dates <- as.Date(c("2020-07-25", "2020-08-01", "2020-08-08", "2020-08-15", "2020-08-22"))
+# dates <- as.Date(c("2020-07-25", "2020-08-01", "2020-08-08", "2020-08-15", "2020-08-22"))
 
 
-df_ensembles <- ensemble_forecasts(df, dates, window_sizes=window_sizes, ensembles)
+df_ensembles <- ensemble_forecasts(df, window_sizes=window_sizes, ensembles=ensembles)
 
 file_name <- paste0("data/ensemble_forecasts/df_ensembles_", Sys.Date(), ".csv")
 write.csv(df_ensembles, file_name, row.names=FALSE)
