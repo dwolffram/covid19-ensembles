@@ -11,6 +11,9 @@ Here we explore forecast availability depending on target_end_date and number of
 * `ensemble_methods.R`  
 Here we implement the different combination methods.
 
+* `ensemble_functions.R`  
+Utility functions to train the ensembles.
+
 * `ensemble_examples.R`  
 This contains some examples on how to use the methods provided in `ensemble_methods.R`
 
