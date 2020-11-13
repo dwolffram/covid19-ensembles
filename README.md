@@ -14,8 +14,8 @@ Here we implement the different combination methods.
 * `ensemble_functions.R`  
 Utility functions to train the ensembles.
 
-* `ensemble_examples.R`  
-This contains some examples on how to use the methods provided in `ensemble_methods.R`
+* `ensemble_examples.R`  (deprecated)
+~~This contains some examples on how to use the methods provided in `ensemble_methods.R`~~
 
 * `compute_ensembles.R`  
 Here we train the ensembles and export their forecasts.
