@@ -3,7 +3,7 @@ In this repo we implement several ensemble methods for quantile forecasts and ev
 
 **Overview:**
 * `data_loading.R`  
-Used to load and preprocess the forecast files as well as the truth data.
+Used to load and preprocess the forecast files as well as the ensemble forecasts and truth data.
 
 * `data_exploration.R`  
 Here we explore forecast availability depending on target_end_date and number of locations. This is used to determine which models will be included in the ensembles.
@@ -14,11 +14,14 @@ Here we implement the different combination methods.
 * `ensemble_examples.R`  
 This contains some examples on how to use the methods provided in `ensemble_methods.R`
 
-* `evaluation.R`  
-Here we evaluate ensemble methods for given dates, window sizes, etc.
+* `compute_ensembles.R`  
+Here we train the ensembles and export their forecasts.
+
+* `scoring.R`  
+Contains some metrics (WIS score, absolute error), as well as utility functions to score forecasts.
+
+* `compute_scores.R`  
+Here we evaluate the individual and ensemble models and export their scores.
 
 * `evaluation_plots.R`  
 A collection of functions to visualize the results.
-
-* `functions.R`  
-Contains some basic functionality such as the WIS score, as well as data loading and cleaning functions.
