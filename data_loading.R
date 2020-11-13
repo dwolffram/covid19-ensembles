@@ -24,7 +24,7 @@ get_filenames <- function(model){
 # get_filenames('YYG-ParamSearch')
 
 load_forecasts <- function(models, exclude_locations=c(), targets=paste(1:4, "wk ahead cum death"),
-                           start_date="2019-01-01", intersect_dates=FALSE){
+                           start_date="2019-01-01", end_date="3000-01-01", intersect_dates=FALSE){
   
   if(missing(models)){
     models <- get_all_models()
@@ -61,7 +61,8 @@ load_forecasts <- function(models, exclude_locations=c(), targets=paste(1:4, "wk
       filter(target %in% targets,
              !(location %in% exclude_locations),
              type == 'quantile',
-             target_end_date >= start_date)
+             target_end_date >= start_date,
+             target_end_date <= end_date)
     
     if (nrow(df_temp) == 0) {
       print(paste0("No relevant forecasts available for: ", m))
@@ -104,3 +105,45 @@ load_truth <- function(as_of=''){
   }
 }
 
+load_ensembles <- function(filename, add_baseline=FALSE){
+  df <- read_csv(filename, 
+                 col_types = cols_only(
+                   target = col_character(),
+                   target_end_date = col_date(format = ""),
+                   location = col_character(),
+                   quantile = col_double(),
+                   value = col_double(),
+                   window_size = col_factor(c("1", "2", "3","4")),
+                   model = col_factor(c('EWA', 'MED', 'V2', 'V3', 'V4', 'GQRA2', 
+                                        'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4')))
+  ) %>% as.data.frame()
+  
+  if(add_baseline){
+    df_baseline <- load_forecasts(models = c("COVIDhub-baseline"), targets = unique(df$target),
+                                  exclude_locations = c("11", "60", "66", "69", "72", "74", "78"), 
+                                  start_date = min(df$target_end_date), 
+                                  end_date = max(df$target_end_date))%>% 
+      select (-c(forecast_date, type))
+    
+    df_baseline$model <- 'Baseline'
+    df_baseline <- bind_rows(replicate(4, df_baseline, simplify = FALSE))
+    df_baseline$window_size <- factor(rep(1:4, each = nrow(df_baseline)/4))
+    
+    df <- bind_rows(df, df_baseline)
+    df$model <- fct_relevel(df$model, c('Baseline', 'EWA', 'MED', 'V2', 'V3', 'V4', 
+                                        'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4'))
+  }
+  
+  return(df)
+}
+
+# df <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk_2020-11-13.csv", add_baseline = TRUE)
+
+add_location_names <- function(df){
+  locations <- read.csv('data/locations.csv')
+  locations <- locations %>%
+    select(-c(abbreviation, population))
+  
+  df <- left_join(df, locations, by="location")
+  return(df)
+}

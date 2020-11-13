@@ -1,26 +1,38 @@
-df_ensembles <- read_csv("data/ensemble_forecasts/df_ensembles_", 
-                         col_types = cols(
-                           forecast_date = col_date(format = ""),
-                           target = col_character(),
-                           target_end_date = col_date(format = ""),
-                           location = col_character(),
-                           type = col_character(),
-                           quantile = col_double(),
-                           value = col_double()))
+source("data_loading.R")
+source("scoring.R")
 
-ensemble_scores <- wis_table(df_ensembles)
+### ENSEMBLES
 
-ensemble_scores$window_size <- as.factor(ensemble_scores$window_size)
-ensemble_scores$model <- factor(ensemble_scores$model, levels=c('EWA', 'MED', 'V2', 'V3', 'V4', 
-                                                         'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4'))
+# 1 wk ahead
 
-ggplot(data = subset(ensemble_scores, location == 'US'), 
-       aes(x = model, y = wis, fill=model)) +
-  facet_wrap(~window_size) +
-  geom_boxplot() +
-  stat_summary(fun.y=mean, geom="point", shape=3) +
-  scale_fill_viridis(discrete = TRUE, alpha=0.5) +
-  theme(legend.position = "none") +
-  labs(title= "WIS by window size (national level)",
-       x = "Model",
-       y = "WIS")
+df_ensembles <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk_2020-11-13.csv", add_baseline = TRUE)
+
+ensemble_scores <- score_forecasts(df_ensembles)
+
+write.csv(ensemble_scores, "scores/ensemble_scores_1wk.csv", row.names=FALSE)
+
+# 4 wk ahead
+
+df_ensembles <- load_ensembles("data/ensemble_forecasts/df_ensembles_4wk_2020-11-11.csv", add_baseline = TRUE)
+
+ensemble_scores <- score_forecasts(df_ensembles)
+
+write.csv(ensemble_scores, "scores/ensemble_scores_4wk.csv", row.names=FALSE)
+
+
+### INDIVIDUAL MODELS
+
+df_individual <- load_forecasts(models = c("CovidAnalytics-DELPHI", "COVIDhub-baseline", "CU-select", 
+                                           "JHU_IDD-CovidSP", "LANL-GrowthRate", "MOBS-GLEAM_COVID", 
+                                           "PSI-DRAFT", "UCLA-SuEIR", "UMass-MechBayes", "YYG-ParamSearch"),
+                                targets = "1 wk ahead cum death",
+                                exclude_locations = c("11", "60", "66", "69", "72", "74", "78"), 
+                                start_date = "2020-06-20", 
+                                end_date = "2020-10-10") %>% 
+  select(-c(forecast_date, type)) %>%
+  select(target_end_date, everything())
+
+individual_scores <- score_forecasts(df_individual)
+
+write.csv(individual_scores, "scores/individual_scores_1wk.csv", row.names=FALSE)
+

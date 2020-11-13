@@ -1,5 +1,12 @@
-# evaluate WIS for a data.frame containing forecasts:
-wis_table <- function(df){
+ae <- function(df){
+  ae_df <- df %>%
+    filter(quantile==0.5) %>%
+    mutate(ae = abs(value - truth)) %>%
+    select(-c(quantile, value))
+  return(ae_df)
+}
+
+wis <- function(df){
   row_index <- names(df)[!(names(df) %in% c("quantile", "value"))]
   df_wide <- reshape(df, direction = "wide", timevar = "quantile",
                      v.names = "value", idvar = row_index)
@@ -32,17 +39,27 @@ wis_table <- function(df){
   df_wide$wgt_pen_l <- rowMeans(df_wide[, grepl("wgt_pen_l", colnames(df_wide))])
   df_wide$wis <- df_wide$wgt_iw + df_wide$wgt_pen_u + df_wide$wgt_pen_l
   
+  df_wide <- df_wide %>%
+    select(!ends_with(as.character(0:9)))
+  
   return(df_wide)
 }
 
-mean_wis <- function(df){
-  df_scores <- wis_table(df)
-  mean_wis_score <- mean(df_scores$wis)
-  return(mean_wis_score)
-}
-
-wis_decomposition <- function(df){
-  df_scores <- wis_table(df)
-  mean_wis_decomposition <- colMeans(df_scores[c("wgt_iw", "wgt_pen_u", "wgt_pen_l", "wis")])
-  return(mean_wis_decomposition)
+score_forecasts <- function(df, scores=c("ae", "wis")){
+  truth <- read.csv(paste0(path_hub, "data-truth/truth-Cumulative Deaths.csv"),
+                    colClasses = c(location = "character", date = "Date")) %>%
+    rename(truth = value) %>% 
+    select(-location_name)
+  
+  df <- df %>%
+    left_join(truth, by=c("target_end_date"="date", "location"="location"))
+  
+  df_scores <- list()
+  for (s in scores){
+    print(s)
+    df_scores[[s]] <- get(s)(df)
+  }
+  df_scores <- reduce(df_scores, merge)
+  
+  return(df_scores)
 }
