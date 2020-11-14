@@ -63,3 +63,16 @@ score_forecasts <- function(df, scores=c("ae", "wis")){
   
   return(df_scores)
 }
+
+
+mean_wis <- function(df){
+  df_scores <- wis(df)
+  mean_wis_score <- mean(df_scores$wis)
+  return(mean_wis_score)
+}
+
+wis_decomposition <- function(df){
+  df_scores <- wis_table(df)
+  mean_wis_decomposition <- colMeans(df_scores[c("wgt_iw", "wgt_pen_u", "wgt_pen_l", "wis")])
+  return(mean_wis_decomposition)
+}
