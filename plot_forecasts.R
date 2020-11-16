@@ -22,12 +22,44 @@ data <- subset(df_wide, model=="V3" & window_size==4)
 data <- subset(df_wide, location=="US" & window_size==4)
 
 
-plot_forecast <- function(data, facet, incidence=FALSE, title=NULL, ncol=4, dir='v', scales='fixed'){
+plot_forecast <- function(data, models, locations, window_sizes,
+                          facet, facet_row=location, facet_col=model,
+                          incidence=FALSE, title=NULL,
+                          start_date='1900-01-01', end_date='3000-01-01',
+                          ncol=4, dir='v', scales='fixed'){
   facet <- ensym(facet)
   
+  if(missing(models)){
+    models <- unique(data$model)
+  }  
+  
+  if(missing(locations)){
+    locations <- unique(data$location)
+  }
+  
+  if(missing(window_sizes)){
+    window_sizes <- unique(data$window_size)
+  }
+  
+  # filter forecasts
+  data <- data %>%
+    filter(model %in% models,
+           location %in%  locations,
+           window_size %in% window_sizes,
+           target_end_date >= start_date,
+           target_end_date <= end_date
+    )
+  
   if (incidence){
+    if (missing(facet)){
+      grouping_vars <- quos(model, location)
+    }
+    else{
+      grouping_vars <- facet
+    }
+    
     data <- data %>% 
-      group_by(!!facet) %>%
+      group_by(!!!grouping_vars) %>%
       mutate(value.0.5 = value.0.5 - lag(truth)) %>%
       mutate(value.0.05 = value.0.05 - lag(truth)) %>%
       mutate(value.0.95 = value.0.95 - lag(truth)) %>%
@@ -37,7 +69,7 @@ plot_forecast <- function(data, facet, incidence=FALSE, title=NULL, ncol=4, dir=
       drop_na()
   }
   
-  
+  # default title
   if(missing(title)){
     horizon = substr(unique(data$target), 1, 1)
     title = paste(horizon, "wk ahead forecasts with 50% and 90% prediction intervals")
@@ -45,6 +77,7 @@ plot_forecast <- function(data, facet, incidence=FALSE, title=NULL, ncol=4, dir=
   
   ggplot(data, aes(x=target_end_date, y=truth)) +
     {if(!missing(facet)) facet_wrap(facet, ncol=ncol, dir=dir, scales=scales)} +
+    {if(missing(facet)) facet_grid(rows=enquos(facet_row), cols=enquos(facet_col), scales=scales)} +
     geom_smooth(aes(y = value.0.5, ymin = value.0.05, ymax = value.0.95), 
                 linetype=2, size=0.5, fill=cols[2], alpha=1, stat = "identity") +
     geom_smooth(aes(y = value.0.5, ymin = value.0.25, ymax = value.0.75),
@@ -62,11 +95,42 @@ plot_forecast <- function(data, facet, incidence=FALSE, title=NULL, ncol=4, dir=
            axis.text = element_text(size = 5)) 
 }
 
+plot_forecast(df_wide, window_sizes=4, models=c('V4', 'QRA4'),
+              locations=c('US', 36), incidence=TRUE,
+              facet_row=location, facet_col=model,
+              scales='free_y')
+
+plot_forecast(df_wide, window_sizes=4,
+              locations=c('US', 36), incidence=TRUE,
+              facet_row=location, facet_col=model,
+              scales='free_y')
+
+plot_forecast(df_wide, window_sizes=4, models=c('V4', 'QRA4'),
+              incidence=TRUE,
+              facet_row=location, facet_col=model,
+              scales='free_y')
+
+
+
+
+plot_forecast(df_wide, window_sizes=4, locations='US', models='QRA3', incidence=FALSE, ncol=4)
+plot_forecast(df_wide, window_sizes=4, locations='US', facet=model, incidence=TRUE, ncol=4)
+
+plot_forecast(df_wide, window_sizes=4, locations=c('US', 36), models='QRA3', 
+              facet=location, incidence=TRUE, ncol=4)
+
+
+
+
+
+
+
+
+
+### OLD
 
 plot_forecast(subset(df_wide, window_size==4 & location=='US'), facet=model, incidence=TRUE, ncol=4)
 plot_forecast(subset(df_wide, window_size==4 & location=='US' & model=='QRA3'), incidence=FALSE, ncol=4)
-
-
 plot_forecast(subset(df_wide, window_size==4 & model=='V3'), facet=location_name, scales='free_y', 
               incidence=TRUE, ncol=8, dir='h')
 
