@@ -45,7 +45,7 @@ results_long <- pivot_longer(subset(individual_scores, select=-c(ae)), cols=c("w
 
 plot_wis <- function(df_long, facet, x='window_size', window_sizes=1:4, locations='all', 
                      start_date='1900-01-01', end_date='3000-01-01',
-                     ncol=4, dir='v'){
+                     kind='bar', ncol=4, dir='v'){
   x <- ensym(x)
   facet <- ensym(facet)
   
@@ -85,20 +85,32 @@ plot_wis <- function(df_long, facet, x='window_size', window_sizes=1:4, location
   
   plot_title <- paste0(plot_title, " - from ", start_date, " until ", end_date)
   
-
-  ggplot(df_long, 
-         aes(x=!!x, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
-    {if(!missing(facet)) facet_wrap(facet, ncol=ncol, dir=dir)} + # if facet is given
-    geom_bar(position="stack", stat="identity") +
+  switch(kind,
+         'bar' = {
+           g <- ggplot(df_long, 
+                       aes(x=!!x, y=value, fill=factor(penalty, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+             geom_bar(position="stack", stat="identity") +
+             scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
+                                labels = c("Overprediction", "Dispersion", "Underprediction")) 
+         },
+         'box' = {
+           g <- ggplot(df_long, 
+                       aes(x=!!x, y=wis, fill=!!x)) +
+             geom_boxplot() +
+             stat_summary(fun.y=mean, geom="point", shape=3) +
+             scale_fill_viridis(discrete = TRUE, alpha=0.5) +
+             theme(legend.position = "none")
+         })
+  
+  g + {if(!missing(facet)) facet_wrap(facet, ncol=ncol, dir=dir)} + # if facet is given
     theme(axis.text.x=element_text(angle=0, hjust=0)) +
-    scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
-                      labels = c("Overprediction", "Dispersion", "Underprediction")) +
     labs(title= plot_title,
          x = xlabel,
          y = "WIS") +
     theme_grey(base_size=8)+
     theme(plot.title= element_text(size=9),
           axis.text = element_text(size = 4))
+      
   }
 
 plot_wis(results_long, x=window_size)
@@ -114,30 +126,9 @@ plot_wis(results_long, location='all', x=model, facet=location, start_date='2020
          ncol=8, dir='h')
 plot_wis(results_long, location='states', x=target_end_date, facet=model)
 
+plot_wis(results_long, locations='national', x=window_size, facet=model, start_date='2020-08-08')
 
 
+plot_wis(results_long, x=window_size, locations='national', kind='box')
+plot_wis(results_long, locations='national', x=window_size, facet=model, kind='box')
 
-
-
-ggplot(data = subset(df, location == 'US'& target_end_date > '2020-08-01'), 
-       aes(x = model, y = wis, fill=model)) +
-  facet_wrap(~window_size) +
-  geom_boxplot() +
-  stat_summary(fun.y=mean, geom="point", shape=3) +
-  scale_fill_viridis(discrete = TRUE, alpha=0.5) +
-  theme(legend.position = "none") +
-  labs(title= "WIS by window size (national level)",
-       x = "Model",
-       y = "WIS")
-
-
-
-ggplot(data = subset(individual_scores, location == 'US'), 
-       aes(x = model, y = ae, fill=model)) +
-  geom_boxplot() +
-  stat_summary(fun.y=mean, geom="point", shape=3) +
-  scale_fill_viridis(discrete = TRUE, alpha=0.5) +
-  theme(legend.position = "none") +
-  labs(title= "WIS by window size (national level)",
-       x = "Model",
-       y = "WIS")
