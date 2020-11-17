@@ -82,13 +82,13 @@ plot_wis <- function(df, facet, x='window_size', window_sizes=1:4, locations='al
   
   switch(locations,
          'all'={
-           plot_title <- "WIS decomposition"
+           plot_title <- "WIS"
            },
          'states' = {
-           plot_title <- "WIS decomposition (state level)"
+           plot_title <- "WIS (state level)"
            },
          'national' = {
-           plot_title <- "WIS decomposition (national level)"
+           plot_title <- "WIS (national level)"
          })
   
   start_date <- min(df$target_end_date)
