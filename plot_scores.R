@@ -108,7 +108,7 @@ plot_wis <- function(df, facet, x='window_size', window_sizes=1:4, locations='al
          'box' = {
            g <- ggplot(subset(df, score=='wis'), 
                        aes(x=!!x, y=value, fill=!!x)) +
-             geom_boxplot() +
+             geom_boxplot(width=0.5) +
              stat_summary(fun.y=mean, geom="point", shape=3) +
              scale_fill_viridis(discrete = TRUE, alpha=0.5) +
              theme_gray(base_size=18) +
