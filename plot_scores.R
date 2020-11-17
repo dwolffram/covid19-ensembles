@@ -1,13 +1,8 @@
 source("data_loading.R")
-source("scoring.R")
-source("ensemble_methods.R")
-source("ensemble_functions.R")
 library(ggplot2)
 
-#load_scores <- function(target, horizon, scores=c('ae', 'wis'))
-
 load_scores <- function(filename, scores=c('ae', 'wis', 'wis_decomposition'), 
-                        add_truth=TRUE, long_format=TRUE){
+                        add_truth=TRUE, add_location_names=TRUE, long_format=TRUE){
   
   if('wis_decomposition' %in% scores){
     scores <- scores[scores != 'wis_decomposition']
@@ -39,6 +34,10 @@ load_scores <- function(filename, scores=c('ae', 'wis', 'wis_decomposition'),
   
   if(add_truth==FALSE){
     df <- df %>% select(-truth)
+  }
+  
+  if(add_location_names==TRUE){
+    df <- add_location_names(df)
   }
   
   if(long_format==FALSE){
@@ -100,7 +99,9 @@ plot_wis <- function(df, facet, x='window_size', window_sizes=1:4, locations='al
          'bar' = {
            g <- ggplot(subset(df, score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
                        aes(x=!!x, y=value, fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
-             geom_bar(position="stack", stat="summary", fun.y="sum", size=0) +
+             geom_bar(position="stack", stat="summary", fun.y="sum", width=0.7) +
+             theme_gray(base_size=18) +
+             theme(axis.text.x=element_text(angle=0, hjust=0)) +
              scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
                                 labels = c("Overprediction", "Dispersion", "Underprediction")) 
          },
@@ -110,17 +111,16 @@ plot_wis <- function(df, facet, x='window_size', window_sizes=1:4, locations='al
              geom_boxplot() +
              stat_summary(fun.y=mean, geom="point", shape=3) +
              scale_fill_viridis(discrete = TRUE, alpha=0.5) +
-             theme(legend.position = "none")
+             theme_gray(base_size=18) +
+             theme(axis.text.x=element_text(angle=0, hjust=0), legend.position = "none")
          })
   
   g + {if(!missing(facet)) facet_wrap(facet, ncol=ncol, dir=dir)} + # if facet is given
-    theme(axis.text.x=element_text(angle=0, hjust=0)) +
     labs(title= plot_title,
          x = xlabel,
-         y = "WIS") +
-    theme_grey(base_size=8)+
-    theme(plot.title= element_text(size=9),
-          axis.text = element_text(size = 4))
+         y = "WIS") #+
+    # theme(plot.title= element_text(size=9),
+    #       axis.text = element_text(size = 4))
       
   }
 
@@ -131,7 +131,7 @@ plot_wis(df, locations='national', x=window_size, facet=model)
 plot_wis(df, locations='national', x=window_size, facet=model, start_date='2020-08-08')
 plot_wis(df, x=model, facet=location)
 plot_wis(df, location='states', x=model, facet=location)
-plot_wis(df, location='states', x=model, facet=location, start_date='2020-08-08', 
+plot_wis(df, location='states', x=model, facet=location_name, start_date='2020-08-08', 
          ncol=8, dir='h')
 plot_wis(df, location='all', x=model, facet=location, start_date='2020-08-08', 
          ncol=8, dir='h')
