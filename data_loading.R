@@ -2,7 +2,6 @@ setwd("/home/dwolffram/covid19-ensembles")
 
 path_hub <- "../covid19-forecast-hub/"
 
-
 library(tidyverse)
 library(dplyr)
 library(readr)
@@ -89,9 +88,8 @@ load_forecasts <- function(models, exclude_locations=c(), targets=paste(1:4, "wk
   return(df)
 }
 
-#a <- load_forecasts(c("YYG-ParamSearch", "IBF-TimeSeries"))
-#a <- load_forecasts(c("YYG-ParamSearch", "IBF-TimeSeries"), start_date="2020-05-23")
-#df <- load_forecasts()
+# df <- load_forecasts(c("YYG-ParamSearch", "IBF-TimeSeries"), start_date="2020-05-23")
+# df <- load_forecasts()
 
 load_truth <- function(as_of=''){
   if(as_of==''){
@@ -147,3 +145,64 @@ add_location_names <- function(df){
   df <- left_join(df, locations, by="location")
   return(df)
 }
+
+add_truth <- function(df){
+  truth <- read.csv(paste0(path_hub, "data-truth/truth-Cumulative Deaths.csv"),
+                    colClasses = c(location = "character", date = "Date")) %>%
+    rename(truth = value) %>% 
+    select(-location_name)
+  
+  df <- df %>%
+    left_join(truth, by=c("target_end_date"="date", "location"="location"))
+  
+  return(df)
+}
+
+load_scores <- function(filename, scores=c('ae', 'wis', 'wis_decomposition'), 
+                        add_truth=TRUE, add_location_names=TRUE, long_format=TRUE){
+  
+  if('wis_decomposition' %in% scores){
+    scores <- scores[scores != 'wis_decomposition']
+    scores <- c(scores, 'wgt_pen_u', 'wgt_iw', 'wgt_pen_l')
+  }
+  
+  df <- read_csv(filename, 
+                 col_types = cols(
+                   target = col_character(),
+                   target_end_date = col_date(format = ""),
+                   location = col_character()
+                 )
+  ) %>%
+    pivot_longer(cols=-any_of(c("target_end_date", "location", "target",  "model",  "window_size",  "truth")),
+                 names_to="score") %>%
+    filter(score %in% scores) %>%
+    as.data.frame()
+  
+  if('window_size' %in% colnames(df)){
+    df$window_size <- factor(df$window_size, levels=c("1", "2", "3","4"))
+  }
+  
+  # fix order of ensemble model names
+  if(str_detect(filename, 'ensemble')){
+    df$model <- factor(df$model, levels=intersect(c('Baseline', 'EWA', 'MED', 'V2', 'V3', 'V4', 
+                                                    'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4'),
+                                                  unique(df$model)))
+  }
+  
+  if(add_truth==FALSE){
+    df <- df %>% select(-truth)
+  }
+  
+  if(add_location_names==TRUE){
+    df <- add_location_names(df)
+  }
+  
+  if(long_format==FALSE){
+    df <- df %>% pivot_wider(names_from='score', values_from='value')
+  }
+  
+  return(df)
+}
+
+# df <- load_scores("scores/ensemble_scores_1wk.csv")
+

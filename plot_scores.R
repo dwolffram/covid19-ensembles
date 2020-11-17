@@ -1,52 +1,6 @@
 source("data_loading.R")
 library(ggplot2)
 
-load_scores <- function(filename, scores=c('ae', 'wis', 'wis_decomposition'), 
-                        add_truth=TRUE, add_location_names=TRUE, long_format=TRUE){
-  
-  if('wis_decomposition' %in% scores){
-    scores <- scores[scores != 'wis_decomposition']
-    scores <- c(scores, 'wgt_pen_u', 'wgt_iw', 'wgt_pen_l')
-  }
-  
-  df <- read_csv(filename, 
-                 col_types = cols(
-                   target = col_character(),
-                   target_end_date = col_date(format = ""),
-                   location = col_character()
-                   )
-  ) %>%
-    pivot_longer(cols=-any_of(c("target_end_date", "location", "target",  "model",  "window_size",  "truth")),
-                 names_to="score") %>%
-    filter(score %in% scores) %>%
-    as.data.frame()
-  
-  if('window_size' %in% colnames(df)){
-    df$window_size <- factor(df$window_size, levels=c("1", "2", "3","4"))
-  }
-  
-  # fix order of ensemble model names
-  if(str_detect(filename, 'ensemble')){
-    df$model <- factor(df$model, levels=intersect(c('Baseline', 'EWA', 'MED', 'V2', 'V3', 'V4', 
-                                          'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4'),
-                                          unique(df$model)))
-    }
-  
-  if(add_truth==FALSE){
-    df <- df %>% select(-truth)
-  }
-  
-  if(add_location_names==TRUE){
-    df <- add_location_names(df)
-  }
-  
-  if(long_format==FALSE){
-    df <- df %>% pivot_wider(names_from='score', values_from='value')
-  }
-  
-  return(df)
-}
-
 df <- load_scores("scores/ensemble_scores_1wk.csv")
 df <- load_scores("scores/ensemble_scores_4wk.csv")
 
