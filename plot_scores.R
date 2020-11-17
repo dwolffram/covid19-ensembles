@@ -106,7 +106,7 @@ plot_wis <- function(df, facet, x='window_size', window_sizes=1:4, locations='al
          },
          'box' = {
            g <- ggplot(subset(df, score=='wis'), 
-                       aes(x=!!x, y=wis, fill=!!x)) +
+                       aes(x=!!x, y=value, fill=!!x)) +
              geom_boxplot() +
              stat_summary(fun.y=mean, geom="point", shape=3) +
              scale_fill_viridis(discrete = TRUE, alpha=0.5) +
@@ -143,6 +143,7 @@ plot_wis(df, x=model, window_sizes=4, locations='national')
 
 plot_wis(df, x=model)
 plot_wis(df, x=model, locations='national', start_date='2020-08-08')
+plot_wis(df, x=model, locations='national', kind='box')
 
 
 
