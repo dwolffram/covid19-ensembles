@@ -1,49 +1,23 @@
 setwd("/home/dwolffram/covid19-ensembles")
 
-source("functions.R")
+source("data_loading.R")
 source("ensemble_methods.R")
+source("ensemble_functions.R")
+source("scoring.R")
 
 library(quantreg)
 
+models <- c("CovidAnalytics-DELPHI", "COVIDhub-baseline", "CU-select", "JHU_IDD-CovidSP",
+            "LANL-GrowthRate", "MOBS-GLEAM_COVID", "PSI-DRAFT", "UCLA-SuEIR", 
+            "UMass-MechBayes", "YYG-ParamSearch")
 
-models <- c("LANL-GrowthRate", "CovidAnalytics-DELPHI", "MOBS-GLEAM_COVID", 
-            "YYG-ParamSearch", "UCLA-SuEIR")
+exclude_locations <- c("11", "60", "66", "69", "72", "74", "78")
 
-exclude_locations <- c("11", "60", "66", "69", "72", "78")
+df <- load_forecasts(models=models, targets=c("1 wk ahead cum death"),
+                     exclude_locations=exclude_locations, start_date="2020-05-23",
+                     intersect_dates=TRUE)
 
-
-df <- load_df(models=models, exclude_locations=exclude_locations)
-
-
-# not all targets are always available
-available_targets <- df %>%
-  group_by(target_end_date, target) %>%
-  summarize(model_count = length(unique(model)))
-
-# dates where all models are available for "1 wk ahead cum death"
-possible_dates <- df %>%
-  group_by(target_end_date, target) %>%
-  summarize(model_count = length(unique(model))) %>%
-  filter(target == "1 wk ahead cum death") %>%
-  filter(model_count == length(models)) %>%
-  pull(target_end_date)
-
-# only consider 1 week ahead forecasts and only the dates with all models available
-df <- df %>% 
-  filter(target == "1 wk ahead cum death") %>%
-  filter(target_end_date %in% possible_dates)
-
-
-
-test_dates <- possible_dates[4:8]
-
-window_size = 4
-
-#train_start = test_dates - window_size*7
-#df_test = subset(df, target_end_date == test_dates[1])
-#df_train = subset(df, (target_end_date < test_dates[1]) & (target_end_date >= train_start[1]))
-
-dfs <- train_test_split(df, test_dates[1], window_size)
+dfs <- train_test_split(df, test_date=as.Date("2020-08-22"), horizon=1, window_size=4)
 df_train <- dfs$df_train
 df_test <- dfs$df_test
 
@@ -51,37 +25,46 @@ df_test <- dfs$df_test
 ### EWA
 ewa_df <- EWA(df_test)
 
-ewa_scores <- wis_table(ewa_df)
+ewa_scores <- wis(ewa_df)
 mean(ewa_scores$wis)
 mean_wis(ewa_df)
-wis_decomposition((ewa_df))
 
 ewa_loss(df_test)
 
-ewa_df <- aggregate(formula = value ~ target + target_end_date + location + type + quantile,
-                      data = df_test, FUN = mean)
+# ewa_df <- aggregate(formula = value ~ target + target_end_date + location + type + quantile,
+#                       data = df_test, FUN = mean)
 
 ### MED
 med_df <- MED(df_test)
 mean_wis(med_df)
 
-med_scores <- wis_table(med_df)
-wis_decomposition((med_df))
+med_scores <- wis(med_df)
 
 med_loss(df_test)
 
 #colMeans(med_scores[c("wgt_iw", "wgt_pen_u", "wgt_pen_l", "wis")])
 
-for (e in c(EWA, MED)){
-  print(deparse(quote(e)))
-  a <- e(df_test)
-  print(mean_wis(a))
-}
+# for (e in c(EWA, MED)){
+#   print(deparse(quote(e)))
+#   a <- e(df_test)
+#   print(mean_wis(a))
+# }
+
+
+### INV
+params <- inv_fit(df_train)
+inv_df <- INV(df_test, params)
+
+mean_wis(inv_df)
+
+s <- params %>% 
+  group_by(location) %>%
+  summarize(sum=sum(param))
 
 
 ### V3
 v3_df <- V3(df_test, params=rep(0.1, 10))
-v3_scores <- wis_table(v3_df)
+v3_scores <- wis(v3_df)
 mean(v3_scores$wis)
 
 mean_wis(v3_df)
@@ -92,27 +75,7 @@ p_v3 <- v3_fit(df_train)
 v3_loss(df_test, p_v3)
 
 
-
-
 ### V4
-fit_ensemble <- function(ensemble, df_train, df_test){
-  fit_method <- paste0(tolower(ensemble), "_fit")
-  temp <- list(df=df_train)
-  p <- do.call(fit_method, temp)
-  p[["df"]] <- data.frame(df_test)
-  df_forecast <- invoke(ensemble, p)
-  return(df_forecast)
-}
-
-v4_df2 <- fit_ensemble("V4", df_train, df_test)
-
-p <- p_v4
-p[["df"]] <- data.frame(df_test)
-invoke(v3_loss, p)
-
-p <- c(df=df_test, p_v4)
-
-invoke(v3_loss, list(df=df_test, p_v4))
 
 # Set an intercept in V3
 v4_df <- V3(df_test, params=rep(0.1, 10), intercept=0)

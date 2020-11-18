@@ -108,7 +108,7 @@ ensemble_forecasts <- function(df, dates, window_sizes, ensembles=c("EWA"),
 
 
 build_ensembles <- function(df_train, df_test, 
-                            ensembles=c("EWA", "MED", "V2", "V3", "V4", 
+                            ensembles=c("EWA", "MED", "INV", "V2", "V3", "V4", 
                                         "QRA2", "QRA3", "QRA4", 
                                         "GQRA2", "GQRA3", "GQRA4")){
   df_ensembles <- data.frame()
@@ -121,6 +121,10 @@ build_ensembles <- function(df_train, df_test,
             },
             "MED" = {
               df_forecast <- MED(df_test)
+            },
+            "INV" = {
+              p <- inv_fit(df_train)
+              df_forecast <- INV(df_test, params=p)
             },
             "V2" = {
               p <- v2_fit(df_train)
