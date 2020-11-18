@@ -46,17 +46,18 @@ wis <- function(df){
 }
 
 score_forecasts <- function(df, scores=c("ae", "wis")){
-  truth <- read.csv(paste0(path_hub, "data-truth/truth-Cumulative Deaths.csv"),
-                    colClasses = c(location = "character", date = "Date")) %>%
-    rename(truth = value) %>% 
-    select(-location_name)
-  
-  df <- df %>%
-    left_join(truth, by=c("target_end_date"="date", "location"="location"))
+  if(!'truth' %in% colnames(df)){
+    truth <- read.csv(paste0(path_hub, "data-truth/truth-Cumulative Deaths.csv"),
+                      colClasses = c(location = "character", date = "Date")) %>%
+      rename(truth = value) %>% 
+      select(-location_name)
+    
+    df <- df %>%
+      left_join(truth, by=c("target_end_date"="date", "location"="location"))
+  }
   
   df_scores <- list()
   for (s in scores){
-    print(s)
     df_scores[[s]] <- get(s)(df)
   }
   df_scores <- reduce(df_scores, merge)
@@ -71,8 +72,3 @@ mean_wis <- function(df){
   return(mean_wis_score)
 }
 
-wis_decomposition <- function(df){
-  df_scores <- wis_table(df)
-  mean_wis_decomposition <- colMeans(df_scores[c("wgt_iw", "wgt_pen_u", "wgt_pen_l", "wis")])
-  return(mean_wis_decomposition)
-}
