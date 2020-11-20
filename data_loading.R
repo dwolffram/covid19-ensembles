@@ -9,21 +9,28 @@ library(readr)
 load_truth <- function(as_of){
   if(missing(as_of)){
     truth <- read.csv(paste0(path_hub, "data-truth/truth-Cumulative Deaths.csv"),
-                      colClasses = c(location="character", date ="Date"))
+                      colClasses = c(location="character", date ="Date")) %>% 
+      select(-location_name)
   }
   else{
     truth <- read.csv(paste0("data/jhu_historic_deaths/processed/truth_jhu_deaths_as_of_",
                              as_of, ".csv"), 
-                      colClasses = c(location="character", date ="Date"))
+                      colClasses = c(location="character", date ="Date")) %>%
+      rename(truth = truth_at_forecast_date)
   }
-  
-  truth <- truth %>%
-    rename(truth = value) %>% 
-    select(-location_name)
   
   return(truth)
 }
 
+add_truth <- function(df, as_of){
+  truth <- load_truth(as_of) %>%
+    rename(truth = value) 
+  
+  df <- df %>%
+    left_join(truth, by=c("target_end_date"="date", "location"="location"))
+  
+  return(df)
+}
 
 add_location_names <- function(df){
   locations <- read.csv('data/locations.csv')
@@ -34,14 +41,6 @@ add_location_names <- function(df){
   return(df)
 }
 
-add_truth <- function(df){
-  truth <- load_truth() 
-  
-  df <- df %>%
-    left_join(truth, by=c("target_end_date"="date", "location"="location"))
-  
-  return(df)
-}
 
 get_all_models <- function(path_hub="../covid19-forecast-hub/"){
   all_models <- list.dirs(path = file.path(path_hub, 'data-processed'), 
