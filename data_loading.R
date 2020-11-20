@@ -168,7 +168,7 @@ load_ensembles <- function(filename, add_truth=FALSE, add_baseline=FALSE){
 
 
 load_scores <- function(filename, scores=c('ae', 'wis', 'wis_decomposition'), 
-                        add_truth=FALSE, add_location_names=TRUE, wide_format=FALSE){
+                        add_truth=FALSE, add_location_names=TRUE, long_format=FALSE){
   
   if('wis_decomposition' %in% scores){
     scores <- scores[scores != 'wis_decomposition']
@@ -206,7 +206,7 @@ load_scores <- function(filename, scores=c('ae', 'wis', 'wis_decomposition'),
     df <- add_location_names(df)
   }
   
-  if(wide_format){
+  if(!long_format){
     df <- df %>% pivot_wider(names_from='score', values_from='value')
   }
   
