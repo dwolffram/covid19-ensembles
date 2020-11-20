@@ -5,13 +5,13 @@ source("scoring.R")
 
 # 1 wk ahead
 
-df_ensembles <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk_2020-11-13.csv", add_baseline = TRUE)
+df_ensembles <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk.csv", add_baseline = TRUE)
 ensemble_scores <- score_forecasts(df_ensembles)
 write.csv(ensemble_scores, "scores/ensemble_scores_1wk.csv", row.names=FALSE)
 
 # 4 wk ahead
 
-df_ensembles <- load_ensembles("data/ensemble_forecasts/df_ensembles_4wk_2020-11-11.csv", add_baseline = TRUE)
+df_ensembles <- load_ensembles("data/ensemble_forecasts/df_ensembles_4wk.csv", add_baseline = TRUE)
 ensemble_scores <- score_forecasts(df_ensembles)
 write.csv(ensemble_scores, "scores/ensemble_scores_4wk.csv", row.names=FALSE)
 
@@ -19,13 +19,13 @@ write.csv(ensemble_scores, "scores/ensemble_scores_4wk.csv", row.names=FALSE)
 
 # 1 wk ahead
 
-df_ensembles <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk_noUS_2020-11-14.csv", add_baseline = TRUE)
+df_ensembles <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk_noUS.csv", add_baseline = TRUE)
 ensemble_scores <- score_forecasts(df_ensembles)
 write.csv(ensemble_scores, "scores/ensemble_scores_1wk_noUS.csv", row.names=FALSE)
 
 # 4 wk ahead
 
-df_ensembles <- load_ensembles("data/ensemble_forecasts/df_ensembles_4wk_noUS_2020-11-15.csv", add_baseline = TRUE)
+df_ensembles <- load_ensembles("data/ensemble_forecasts/df_ensembles_4wk_noUS.csv", add_baseline = TRUE)
 ensemble_scores <- score_forecasts(df_ensembles)
 write.csv(ensemble_scores, "scores/ensemble_scores_4wk_noUS.csv", row.names=FALSE)
 
