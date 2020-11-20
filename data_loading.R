@@ -16,7 +16,7 @@ load_truth <- function(as_of){
     truth <- read.csv(paste0("data/jhu_historic_deaths/processed/truth_jhu_deaths_as_of_",
                              as_of, ".csv"), 
                       colClasses = c(location="character", date ="Date")) %>%
-      rename(truth = truth_at_forecast_date)
+      rename(value = truth_at_forecast_date)
   }
   
   return(truth)

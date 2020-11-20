@@ -18,24 +18,14 @@ train_test_split <- function(df, test_date, horizon, window_size){
   
   # load historic truth data for training (possibly unrevised at forecast date)
   forecast_date <- max(df_train$target_end_date + 2)
-  truth_at_forecast_date <- read.csv(paste0("data/jhu_historic_deaths/processed/truth_jhu_deaths_as_of_",
-                                            forecast_date, ".csv"), 
-                                     colClasses = c(location = "character", date = "Date"))
   
-  df_train <- df_train %>%
-    left_join(truth_at_forecast_date, by=c("target_end_date"="date", "location"="location")) %>%
-    rename(truth = truth_at_forecast_date)
+  df_train <- add_truth(df_train, as_of=forecast_date)
   
   ### TEST DATA
   df_test = subset(df, target_end_date == test_date)
   
-  truth <- read.csv(paste0(path_hub, "data-truth/truth-Cumulative Deaths.csv"),
-                    colClasses = c(location = "character", date = "Date")) %>%
-    rename(truth = value) %>% 
-    select(-location_name)
-  
-  df_test <- df_test %>%
-    left_join(truth, by=c("target_end_date"="date", "location"="location"))
+  # use latest truth data for evaluation
+  df_test <- add_truth(df_test)
   
   return(list(df_train=df_train, df_test=df_test))
 }
@@ -175,4 +165,4 @@ build_ensembles <- function(df_train, df_test,
 }
 
 
-# a <- build_ensembles(df_train, df_test, c("EWA", "MED", "V3", "QRA3", "GQRA3"))
+# ensembles <- build_ensembles(df_train, df_test, c("EWA", "MED", "V3", "QRA3", "GQRA3"))
