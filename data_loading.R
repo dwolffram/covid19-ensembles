@@ -16,6 +16,11 @@ load_truth <- function(as_of){
                              as_of, ".csv"), 
                       colClasses = c(location="character", date ="Date"))
   }
+  
+  truth <- truth %>%
+    rename(truth = value) %>% 
+    select(-location_name)
+  
   return(truth)
 }
 
@@ -30,9 +35,7 @@ add_location_names <- function(df){
 }
 
 add_truth <- function(df){
-  truth <- load_truth() %>%
-    rename(truth = value) %>% 
-    select(-location_name)
+  truth <- load_truth() 
   
   df <- df %>%
     left_join(truth, by=c("target_end_date"="date", "location"="location"))
