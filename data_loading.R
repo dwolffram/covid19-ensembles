@@ -6,6 +6,40 @@ library(tidyverse)
 library(dplyr)
 library(readr)
 
+load_truth <- function(as_of){
+  if(missing(as_of)){
+    truth <- read.csv(paste0(path_hub, "data-truth/truth-Cumulative Deaths.csv"),
+                      colClasses = c(location="character", date ="Date"))
+  }
+  else{
+    truth <- read.csv(paste0("data/jhu_historic_deaths/processed/truth_jhu_deaths_as_of_",
+                             as_of, ".csv"), 
+                      colClasses = c(location="character", date ="Date"))
+  }
+  return(truth)
+}
+
+
+add_location_names <- function(df){
+  locations <- read.csv('data/locations.csv')
+  locations <- locations %>%
+    select(-c(abbreviation, population))
+  
+  df <- left_join(df, locations, by="location")
+  return(df)
+}
+
+add_truth <- function(df){
+  truth <- load_truth() %>%
+    rename(truth = value) %>% 
+    select(-location_name)
+  
+  df <- df %>%
+    left_join(truth, by=c("target_end_date"="date", "location"="location"))
+  
+  return(df)
+}
+
 get_all_models <- function(path_hub="../covid19-forecast-hub/"){
   all_models <- list.dirs(path = file.path(path_hub, 'data-processed'), 
                           full.names = FALSE, recursive = FALSE)
@@ -91,19 +125,8 @@ load_forecasts <- function(models, exclude_locations=c(), targets=paste(1:4, "wk
 # df <- load_forecasts(c("YYG-ParamSearch", "IBF-TimeSeries"), start_date="2020-05-23")
 # df <- load_forecasts()
 
-load_truth <- function(as_of=''){
-  if(as_of==''){
-    truth <- read.csv(paste0(path_hub, "data-truth/truth-Cumulative Deaths.csv"),
-             colClasses = c(location="character", date ="Date"))
-  }
-  else{
-    truth <- read.csv(paste0("data/jhu_historic_deaths/processed/truth_jhu_deaths_as_of_",
-                    as_of, ".csv"), 
-             colClasses = c(location="character", date ="Date"))
-  }
-}
 
-load_ensembles <- function(filename, add_baseline=FALSE){
+load_ensembles <- function(filename, add_truth=FALSE, add_baseline=FALSE){
   df <- read_csv(filename, 
                  col_types = cols_only(
                    target = col_character(),
@@ -112,7 +135,7 @@ load_ensembles <- function(filename, add_baseline=FALSE){
                    quantile = col_double(),
                    value = col_double(),
                    window_size = col_factor(c("1", "2", "3","4")),
-                   model = col_factor(c('EWA', 'MED', 'V2', 'V3', 'V4', 'GQRA2', 
+                   model = col_factor(c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4', 'GQRA2', 
                                         'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4')))
   ) %>% as.data.frame()
   
@@ -128,8 +151,12 @@ load_ensembles <- function(filename, add_baseline=FALSE){
     df_baseline$window_size <- factor(rep(1:4, each = nrow(df_baseline)/4))
     
     df <- bind_rows(df, df_baseline)
-    df$model <- fct_relevel(df$model, c('Baseline', 'EWA', 'MED', 'V2', 'V3', 'V4', 
+    df$model <- fct_relevel(df$model, c('Baseline', 'EWA', 'MED', 'INV', 'V2', 'V3', 'V4', 
                                         'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4'))
+  }
+  
+  if(add_truth){
+    df <- add_truth(df)
   }
   
   return(df)
@@ -137,29 +164,9 @@ load_ensembles <- function(filename, add_baseline=FALSE){
 
 # df <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk_2020-11-13.csv", add_baseline = TRUE)
 
-add_location_names <- function(df){
-  locations <- read.csv('data/locations.csv')
-  locations <- locations %>%
-    select(-c(abbreviation, population))
-  
-  df <- left_join(df, locations, by="location")
-  return(df)
-}
-
-add_truth <- function(df){
-  truth <- read.csv(paste0(path_hub, "data-truth/truth-Cumulative Deaths.csv"),
-                    colClasses = c(location = "character", date = "Date")) %>%
-    rename(truth = value) %>% 
-    select(-location_name)
-  
-  df <- df %>%
-    left_join(truth, by=c("target_end_date"="date", "location"="location"))
-  
-  return(df)
-}
 
 load_scores <- function(filename, scores=c('ae', 'wis', 'wis_decomposition'), 
-                        add_truth=TRUE, add_location_names=TRUE, long_format=TRUE){
+                        add_truth=FALSE, add_location_names=TRUE, wide_format=FALSE){
   
   if('wis_decomposition' %in% scores){
     scores <- scores[scores != 'wis_decomposition']
@@ -184,20 +191,20 @@ load_scores <- function(filename, scores=c('ae', 'wis', 'wis_decomposition'),
   
   # fix order of ensemble model names
   if(str_detect(filename, 'ensemble')){
-    df$model <- factor(df$model, levels=intersect(c('Baseline', 'EWA', 'MED', 'V2', 'V3', 'V4', 
+    df$model <- factor(df$model, levels=intersect(c('Baseline', 'EWA', 'MED', 'INV', 'V2', 'V3', 'V4', 
                                                     'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4'),
                                                   unique(df$model)))
   }
   
-  if(add_truth==FALSE){
-    df <- df %>% select(-truth)
+  if(add_truth){
+    df <- add_truth(df)
   }
   
-  if(add_location_names==TRUE){
+  if(add_location_names){
     df <- add_location_names(df)
   }
   
-  if(long_format==FALSE){
+  if(wide_format){
     df <- df %>% pivot_wider(names_from='score', values_from='value')
   }
   

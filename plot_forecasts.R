@@ -127,7 +127,7 @@ plot_forecast(df_wide, window_sizes=4,
 
 
 
-
+plot_forecast(df_wide, locations='US', facet=model)
 plot_forecast(df_wide, window_sizes=4, locations='US', models='QRA3', incidence=FALSE, ncol=4)
 plot_forecast(df_wide, window_sizes=4, locations='US', facet=model, incidence=TRUE, ncol=4)
 

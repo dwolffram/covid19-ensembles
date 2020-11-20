@@ -45,15 +45,10 @@ wis <- function(df){
   return(df_wide)
 }
 
-score_forecasts <- function(df, scores=c("ae", "wis")){
+score_forecasts <- function(df, scores=c("ae", "wis"), keep_truth=FALSE){
   if(!'truth' %in% colnames(df)){
-    truth <- read.csv(paste0(path_hub, "data-truth/truth-Cumulative Deaths.csv"),
-                      colClasses = c(location = "character", date = "Date")) %>%
-      rename(truth = value) %>% 
-      select(-location_name)
-    
-    df <- df %>%
-      left_join(truth, by=c("target_end_date"="date", "location"="location"))
+    warning('No truth data provided. Automatically added latest data.')
+    df <- add_truth(df)
   }
   
   df_scores <- list()
@@ -62,9 +57,12 @@ score_forecasts <- function(df, scores=c("ae", "wis")){
   }
   df_scores <- reduce(df_scores, merge)
   
+  if(!keep_truth){
+    df_scores <- df_scores %>% select(-truth)
+  }
+  
   return(df_scores)
 }
-
 
 mean_wis <- function(df){
   df_scores <- wis(df)
