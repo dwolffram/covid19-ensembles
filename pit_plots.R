@@ -27,6 +27,54 @@ pit_histogram <- function(df){
   
 }
 
+df <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk.csv", add_baseline = TRUE)
+df <- add_truth(df)
+a <- df
+
+pit <- function(df){
+  df_temp <- df
+  df_temp$covered <- (df$value <= df$truth)
+  df_temp$last_covered <- (df_temp$covered == TRUE) & (lead(df_temp$covered) == FALSE)
+  df_temp$above <- df$value < df$truth
+  
+  df_temp <- subset(df_temp, last_covered==TRUE | (quantile==0.990 & above==TRUE))
+  try(
+    {df_temp[(df_temp$quantile==0.990 & df_temp$above==TRUE),]$quantile = 1},
+    silent=TRUE
+  )
+  
+  ggplot(df_temp, aes(quantile, y=..density..)) +
+    geom_histogram(breaks=c(0, unique(df$quantile), 1), closed="right")
+}
+
+pit(subset(df, location=='US' & model=='GQRA4'))
+
+a$covered <- (df$value <= df$truth)
+a$last_covered <- a$covered == TRUE & lead(a$covered) == FALSE
+a$above <- df$value < df$truth
+
+sum(subset(a, quantile==0.990 & above==TRUE)$above)
+
+View(subset(a, quantile==0.990 & above==TRUE))
+
+b <- subset(a, last_covered==TRUE)
+c <- subset(a, last_covered==TRUE | (quantile==0.990 & above==TRUE))
+c[(c$quantile==0.990 & c$above==TRUE),]$quantile=1
+
+View(subset(c, quantile==0.990 & above==TRUE))
+
+View(subset(c, quantile==1))
+
+unique(df$quantile)
+
+ggplot(subset(c, location=='US' & model=='QRA3'), aes(quantile)) +
+  geom_histogram(breaks=c(0, unique(df$quantile), 1), closed="right")
+
+ggplot(subset(c, location=='US' & model=='QRA3'), aes(quantile, y=..density..)) +
+  geom_histogram(breaks=c(0, unique(df$quantile), 1), closed="right")
+
+
+
 pit_histogram(subset(results, location=='US' & method=='EWA'))
 
 
