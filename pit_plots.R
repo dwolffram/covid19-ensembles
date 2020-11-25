@@ -1,53 +1,44 @@
-pit_histogram <- function(df){
-  df <- df %>%
-    select(starts_with('value') | truth)
-  
-  df <- data.frame(1*sapply(subset(df, select=-c(truth)), 
-                            function(x) x >= df$truth))
-  for (i in rev(2:(ncol(df)))){
-    df[, i] = (df[, i] - df[, i-1])
-  }
-  
-  df$value.1 <- 1- rowSums(df)
-  
-  df <- data.frame(colMeans(df))
-  colnames(df) <- 'value'
-  
-  quantiles <- c(get_quantile_levels(), 1)
-  
-  df$quantile <- quantiles
-  widths <- c(0.01, diff(quantiles))
-  ggplot(data=df, aes(x=quantile, y=value/widths, width=widths)) +
-    geom_bar(stat="identity", position = position_nudge(x = -c(0.01, diff(quantiles))/2),
-             fill=viridis(3)[2]) +
-    labs(x='Probability Integral Transform',
-         y='Density') +
-    geom_segment(aes(x=0,xend=1,y=1,yend=1), linetype="dashed", color=viridis(3)[1])
-  
-  
-}
 
 df <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk.csv", add_baseline = TRUE)
 df <- add_truth(df)
 a <- df
 
-pit <- function(df){
-  df_temp <- df
-  df_temp$covered <- (df$value <= df$truth)
-  df_temp$last_covered <- (df_temp$covered == TRUE) & (lead(df_temp$covered) == FALSE)
-  df_temp$above <- df$value < df$truth
+pit <- function(df, breaks=seq(0, 1, 0.1)){
+  if(is.character(breaks)){
+    if (breaks == 'all') breaks <- c(0, unique(df$quantile), 1)
+  }
   
-  df_temp <- subset(df_temp, last_covered==TRUE | (quantile==0.990 & above==TRUE))
-  try(
-    {df_temp[(df_temp$quantile==0.990 & df_temp$above==TRUE),]$quantile = 1},
-    silent=TRUE
-  )
+  # find lowest quantile that is above the observation
+  df$below <- (df$value <= df$truth)
+  df$first_above <- (df$below == FALSE) & (lag(df$below) == TRUE)
   
-  ggplot(df_temp, aes(quantile, y=..density..)) +
-    geom_histogram(breaks=c(0, unique(df$quantile), 1), closed="right")
+  # check if observation is above highest quantile
+  df$above <- df$value < df$truth & df$quantile == 0.990
+  df$quantile[df$above==TRUE] <- 1
+  
+  df <- subset(df, first_above==TRUE | above==TRUE)
+
+  ggplot(df, aes(quantile, y=..density..)) +
+    geom_histogram(breaks=breaks, closed="right", fill=viridis(3)[2])+
+    labs(x='Probability Integral Transform',
+         y='Density') +
+    geom_segment(aes(x=0,xend=1,y=1,yend=1), linetype="dashed", color=viridis(3)[1]) +
+    facet_wrap('model', ncol=3)
 }
 
-pit(subset(df, location=='US' & model=='GQRA4'))
+
+pit(subset(df, location!='US' & target_end_date >= '2020-08-08'))
+
+pit(subset(df, location=='US' & model=='V4'), breaks='all')
+pit(subset(df, location=='US' & model=='EWA'))
+
+pit(subset(df, location=='US' & model=='EWA'))
+pit(subset(df, location!='US' & model=='EWA'))
+pit(subset(df, location!='US' & model=='INV'))
+pit(subset(df, location!='US' & model=='GQRA2'))
+pit(subset(df, location!='US' & model=='V2'))
+
+unique(df$quantile)
 
 a$covered <- (df$value <= df$truth)
 a$last_covered <- a$covered == TRUE & lead(a$covered) == FALSE
@@ -78,45 +69,6 @@ ggplot(subset(c, location=='US' & model=='QRA3'), aes(quantile, y=..density..)) 
 pit_histogram(subset(results, location=='US' & method=='EWA'))
 
 
-#combine outer bins
-pit_histogram <- function(df){
-  df <- df %>%
-    select(starts_with('value') | truth)
-  
-  df <- data.frame(1*sapply(subset(df, select=-c(truth)), 
-                            function(x) x >= df$truth))
-  for (i in rev(2:(ncol(df)))){
-    df[, i] = (df[, i] - df[, i-1])
-  }
-  
-  df$value.1 <- 1- rowSums(df)
-  
-  df <- data.frame(colMeans(df))
-  colnames(df) <- 'value'
-  
-  quantiles <- c(get_quantile_levels(), 1)
-  
-  df$quantile <- quantiles
-  
-  
-  df[3, 1] <- sum(head(df$value, 3))
-  df[nrow(df), 1] <- sum(tail(df$value, 3))
-  df <- df[-c(1, 2, nrow(df)-1, nrow(df)-2), ]
-  
-  width <- 0.05
-  ggplot(data=df, aes(x=quantile, y=value/width, width=width)) +
-    geom_bar(stat="identity", position = position_nudge(x = -width/2),
-             fill=viridis(3)[2]) +
-    labs(x='Probability Integral Transform',
-         y='Density') +
-    geom_segment(aes(x=0,xend=1,y=1,yend=1), linetype="dashed", color=viridis(3)[1])
-  
-  
-}
-
-pit_histogram(subset(results, location=='US' & method=='GQRA3' & target_end_date > '2020-08-01'))
-pit_histogram(subset(results_new, location=='US' & method=='GQRA4' & window_size==4))
-pit_histogram(subset(results, location=='US' & method=='EWA'))
 
 ### ALL METHODS, 10 BINS
 
