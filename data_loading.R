@@ -32,6 +32,23 @@ add_truth <- function(df, as_of){
   return(df)
 }
 
+remove_revisions <- function(df, window_size=4){
+  revisions <- read.csv("data/revisions.csv", colClasses = c(first_valid_test_date ="Date"))
+  
+  # infer horizon from target column
+  horizon <- as.numeric(substr(unique(df$target), 1, 1))
+  
+  # to exclude forecasts trained on unrevised data
+  time_delta <- window_size*7 + (horizon - 1)*7
+  
+  df <- df %>%
+    rowwise() %>%
+    filter(all(!(location == revisions[, 1] & target_end_date < revisions[, 3] + time_delta))) %>%
+    data.frame()
+  
+  return(df)
+}
+
 add_location_names <- function(df){
   locations <- read.csv('data/locations.csv')
   locations <- locations %>%
@@ -59,7 +76,8 @@ get_filenames <- function(model){
 # get_filenames('YYG-ParamSearch')
 
 load_forecasts <- function(models, exclude_locations=c(), targets=paste(1:4, "wk ahead cum death"),
-                           start_date="2019-01-01", end_date="3000-01-01", intersect_dates=FALSE){
+                           start_date="2019-01-01", end_date="3000-01-01", intersect_dates=FALSE,
+                           add_truth=FALSE, remove_revisions=FALSE){
   
   if(missing(models)){
     models <- get_all_models()
@@ -121,6 +139,14 @@ load_forecasts <- function(models, exclude_locations=c(), targets=paste(1:4, "wk
       as.data.frame()
   }
   
+  if(remove_revisions){
+    df <- remove_revisions(df, window_size=4)
+  }
+  
+  if(add_truth){
+    df <- add_truth(df)
+  }
+  
   return(df)
 }
 
@@ -128,7 +154,8 @@ load_forecasts <- function(models, exclude_locations=c(), targets=paste(1:4, "wk
 # df <- load_forecasts()
 
 
-load_ensembles <- function(filename, add_truth=FALSE, add_baseline=FALSE){
+load_ensembles <- function(filename, add_truth=FALSE, add_baseline=FALSE,
+                           remove_revisions=FALSE){
   df <- read_csv(filename, 
                  col_types = cols_only(
                    target = col_character(),
@@ -153,8 +180,12 @@ load_ensembles <- function(filename, add_truth=FALSE, add_baseline=FALSE){
     df_baseline$window_size <- factor(rep(1:4, each = nrow(df_baseline)/4))
     
     df <- bind_rows(df, df_baseline)
-    df$model <- fct_relevel(df$model, c('Baseline', 'EWA', 'MED', 'INV', 'V2', 'V3', 'V4', 
-                                        'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4'))
+    df$model <- fct_relevel(df$model, c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4', 
+                                        'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4', 'Baseline'))
+  }
+
+  if(remove_revisions){
+    df <- remove_revisions(df)
   }
   
   if(add_truth){
@@ -168,7 +199,8 @@ load_ensembles <- function(filename, add_truth=FALSE, add_baseline=FALSE){
 
 
 load_scores <- function(filename, scores=c('ae', 'wis', 'wis_decomposition'), 
-                        add_truth=FALSE, add_location_names=TRUE, long_format=FALSE){
+                        add_truth=FALSE, remove_revisions=FALSE, 
+                        add_location_names=TRUE, long_format=FALSE){
   
   if('wis_decomposition' %in% scores){
     scores <- scores[scores != 'wis_decomposition']
@@ -193,9 +225,14 @@ load_scores <- function(filename, scores=c('ae', 'wis', 'wis_decomposition'),
   
   # fix order of ensemble model names
   if(str_detect(filename, 'ensemble')){
-    df$model <- factor(df$model, levels=intersect(c('Baseline', 'EWA', 'MED', 'INV', 'V2', 'V3', 'V4', 
-                                                    'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4'),
+    df$model <- factor(df$model, levels=intersect(c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4', 
+                                                    'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
+                                                    'Baseline'),
                                                   unique(df$model)))
+  }
+  
+  if(remove_revisions){
+    df <- remove_revisions(df)
   }
   
   if(add_truth){
