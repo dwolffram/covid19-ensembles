@@ -77,7 +77,7 @@ get_filenames <- function(model){
 
 load_forecasts <- function(models, exclude_locations=c(), targets=paste(1:4, "wk ahead cum death"),
                            start_date="2019-01-01", end_date="3000-01-01", intersect_dates=FALSE,
-                           add_truth=FALSE, remove_revisions=FALSE){
+                           add_truth=FALSE, remove_revisions=FALSE, add_location_names=TRUE){
   
   if(missing(models)){
     models <- get_all_models()
@@ -147,6 +147,11 @@ load_forecasts <- function(models, exclude_locations=c(), targets=paste(1:4, "wk
     df <- add_truth(df)
   }
   
+  if(add_location_names){
+    df <- add_location_names(df)
+  }
+  
+  
   return(df)
 }
 
@@ -155,7 +160,7 @@ load_forecasts <- function(models, exclude_locations=c(), targets=paste(1:4, "wk
 
 
 load_ensembles <- function(filename, add_truth=FALSE, add_baseline=FALSE,
-                           remove_revisions=FALSE){
+                           remove_revisions=FALSE, add_location_names=TRUE){
   df <- read_csv(filename, 
                  col_types = cols_only(
                    target = col_character(),
@@ -190,6 +195,10 @@ load_ensembles <- function(filename, add_truth=FALSE, add_baseline=FALSE,
   
   if(add_truth){
     df <- add_truth(df)
+  }
+  
+  if(add_location_names){
+    df <- add_location_names(df)
   }
   
   return(df)

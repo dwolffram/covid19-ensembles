@@ -3,7 +3,7 @@ library(viridis)
 
 ### PLOT FORECASTS
 
-plot_forecast <- function(data, models, locations, window_sizes,
+plot_forecast <- function(df, models, locations, window_sizes,
                           facet, facet_row=location_name, facet_col=model,
                           incidence=FALSE, center=FALSE, title=NULL,
                           start_date='1900-01-01', end_date='3000-01-01',
@@ -11,28 +11,30 @@ plot_forecast <- function(data, models, locations, window_sizes,
   cols <- colorRampPalette(c("deepskyblue4", "lightgrey"))(2 + 1)[-1] # length(levels_coverage) + 1
   facet <- ensym(facet)
   
+  df <- pivot_wider(df, names_from=quantile, names_prefix="value.", values_from=value)
+  
   if(missing(models)){
-    models <- unique(data$model)
+    models <- unique(df$model)
   }  
   
   if(missing(locations)){
-    locations <- unique(data$location)
+    locations <- unique(df$location)
   }
   
-  if(missing(window_sizes) & 'window_size' %in% colnames(data)){
-    window_sizes <- unique(data$window_size)
+  if(missing(window_sizes) & 'window_size' %in% colnames(df)){
+    window_sizes <- unique(df$window_size)
   }
   
   # filter forecasts
-  data <- data %>%
+  df <- df %>%
     filter(model %in% models,
            location %in%  locations,
            target_end_date >= start_date,
            target_end_date <= end_date
     )
   
-  if('window_size'  %in% colnames(data)){
-    data <- data %>%
+  if('window_size'  %in% colnames(df)){
+    df <- df %>%
       filter(window_size %in% window_sizes)
   }
   
@@ -44,9 +46,9 @@ plot_forecast <- function(data, models, locations, window_sizes,
       grouping_vars <- facet
     }
     
-    horizon = as.numeric(substr(unique(data$target), 1, 1))
+    horizon = as.numeric(substr(unique(df$target), 1, 1))
     
-    data <- data %>% 
+    df <- df %>% 
       group_by(!!!grouping_vars) %>%
       mutate(value.0.5 = value.0.5 - lag(truth, horizon)) %>%
       mutate(value.0.05 = value.0.05 - lag(truth, horizon)) %>%
@@ -65,7 +67,7 @@ plot_forecast <- function(data, models, locations, window_sizes,
       grouping_vars <- facet
     }
     
-    data <- data %>% 
+    df <- df %>% 
       group_by(!!!grouping_vars) %>%
       mutate(value.0.5 = value.0.5 - truth) %>%
       mutate(value.0.05 = value.0.05 - truth) %>%
@@ -78,11 +80,11 @@ plot_forecast <- function(data, models, locations, window_sizes,
   
   # default title
   if(missing(title)){
-    horizon = substr(unique(data$target), 1, 1)
+    horizon = substr(unique(df$target), 1, 1)
     title = paste(horizon, "wk ahead forecasts with 50% and 90% prediction intervals")
   }
   
-  ggplot(data, aes(x=target_end_date, y=truth)) +
+  ggplot(df, aes(x=target_end_date, y=truth)) +
     {if(!missing(facet)) facet_wrap(facet, ncol=ncol, dir=dir, scales=scales)} +
     {if(missing(facet)) facet_grid(rows=enquos(facet_row), cols=enquos(facet_col), scales=scales)} +
     geom_smooth(aes(y = value.0.5, ymin = value.0.05, ymax = value.0.95), 
