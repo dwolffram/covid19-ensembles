@@ -22,7 +22,7 @@ models <- c("CovidAnalytics-DELPHI", "COVIDhub-baseline", "CU-select", "JHU_IDD-
 
 exclude_locations <- c("11", "60", "66", "69", "72", "74", "78")
 
-df <- load_forecasts(models=models, targets=c("4 wk ahead cum death"),
+df <- load_forecasts(models=models, targets=c("1 wk ahead cum death"),
                      exclude_locations=exclude_locations, start_date="2020-05-23",
                      intersect_dates=TRUE)
 
