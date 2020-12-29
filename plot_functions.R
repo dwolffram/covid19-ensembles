@@ -7,7 +7,7 @@ plot_forecast <- function(df, models, locations, window_sizes,
                           facet, facet_row=location_name, facet_col=model,
                           incidence=FALSE, center=FALSE, title=NULL,
                           start_date='1900-01-01', end_date='3000-01-01',
-                          ncol=4, dir='v', scales='fixed'){
+                          ncol=4, dir='v', scales='fixed', base_size=18){
   cols <- colorRampPalette(c("deepskyblue4", "lightgrey"))(2 + 1)[-1] # length(levels_coverage) + 1
   facet <- ensym(facet)
   
@@ -99,7 +99,7 @@ plot_forecast <- function(df, models, locations, window_sizes,
     labs(title=title,
          x = "Date",
          y = "Deaths") +
-    theme_grey(base_size=18)#+
+    theme_grey(base_size=base_size)#+
   # theme(plot.title= element_text(size=9),
   #       axis.text = element_text(size = 5)) 
 }
