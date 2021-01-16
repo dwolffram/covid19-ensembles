@@ -95,3 +95,56 @@ df$truth <- rep(s, each=length(alphas))
 df$index <- rep(1:length(s), each=length(alphas))
 
 upit_histogram(df)
+
+
+
+
+upit_histogram <- function(df){
+  bins <- df %>%
+    group_by(target_end_date, location) %>%
+    summarize(bin = get_bin(truth, value, quantile))
+  
+  e <- t(sapply(bins$bin, FUN=get_bounds))
+  e <- data.frame(e)
+  e$val <- 1/(nrow(bins)*(e$X2 - e$X1))
+  
+  # results <- data.frame(alpha=c(unique(df$quantile), 1))
+  results <- data.frame(alpha=c(.1, .2, .3, .4, .5, .6, .7, .8, .9, 1))
+  results$upit <- sapply(results$alpha, FUN=get_upit, temp=e)
+  results <- bind_rows(results, data.frame(alpha=0, upit=0))
+  results <- arrange(results, alpha)
+  
+  ggplot(results, aes(alpha, upit)) + 
+    geom_rect(aes(xmin = alpha, xmax = lead(alpha), ymin = 0, ymax = lead(upit)), 
+              color="black", fill = "black", alpha = 0.3) +
+    scale_x_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
+                       labels=c("0", "0.25", "0.5", "0.75", "1"))+
+    labs(x='Probability Integral Transform',
+         y='Density') +
+    geom_segment(aes(x=0,xend=1,y=1,yend=1), linetype="dashed", color="black") +
+    theme_gray(base_size=16)
+  
+}
+
+b <- subset(df, location!='US' & model=='EWA')
+#b <- add_truth(b)
+upit_histogram(b)
+
+df <- add_truth(df)
+
+upit_histogram(subset(df, location!='US' & model=='QRA2'))
+
+
+bins <- subset(df, location!='US' & model=='QRA2') %>%
+  group_by(target_end_date, location) %>%
+  summarize(bin = get_bin(truth, value, quantile))
+
+e <- t(sapply(bins$bin, FUN=get_bounds))
+e <- data.frame(e)
+e$val <- 1/(nrow(bins)*(e$X2 - e$X1))
+
+# results <- data.frame(alpha=c(unique(df$quantile), 1))
+results <- data.frame(alpha=c(.1, .2, .3, .4, .5, .6, .7, .8, .9, 1))
+results$upit <- sapply(results$alpha, FUN=get_upit, temp=e)
+results <- bind_rows(results, data.frame(alpha=0, upit=0))
+results <- arrange(results, alpha)
