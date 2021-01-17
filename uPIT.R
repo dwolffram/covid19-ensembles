@@ -97,20 +97,31 @@ df$index <- rep(1:length(s), each=length(alphas))
 upit_histogram(df)
 
 
+### COVID-FORECASTS
+source("data_loading.R")
+df <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk.csv", add_baseline = TRUE, remove_revisions=TRUE, add_truth=TRUE)
+df <- add_truth(df)
+
+seq(0, 1, 0.05)
+unique(df$quantile)[unique(df$quantile) %in% seq(0, 1, 0.05)]
+unique(df$quantile)[unique(df$quantile) %in% round(seq(0, 1, 0.05), 3)]
 
 
-upit_histogram <- function(df){
-  bins <- df %>%
+upit_histogram <- function(df, breaks){
+  if(!missing(breaks)){
+    df <- subset(df, quantile %in% round(breaks, 3))
+  }
+  
+  temp <- df %>%
     group_by(target_end_date, location) %>%
     summarize(bin = get_bin(truth, value, quantile))
   
-  e <- t(sapply(bins$bin, FUN=get_bounds))
-  e <- data.frame(e)
-  e$val <- 1/(nrow(bins)*(e$X2 - e$X1))
+  temp <- t(sapply(temp$bin, FUN=get_bounds))
+  temp <- data.frame(temp)
+  temp$val <- 1/(nrow(temp)*(temp$X2 - temp$X1))
   
-  # results <- data.frame(alpha=c(unique(df$quantile), 1))
-  results <- data.frame(alpha=c(.1, .2, .3, .4, .5, .6, .7, .8, .9, 1))
-  results$upit <- sapply(results$alpha, FUN=get_upit, temp=e)
+  results <- data.frame(alpha=c(unique(df$quantile), 1))
+  results$upit <- sapply(results$alpha, FUN=get_upit, temp=temp)
   results <- bind_rows(results, data.frame(alpha=0, upit=0))
   results <- arrange(results, alpha)
   
@@ -118,33 +129,32 @@ upit_histogram <- function(df){
     geom_rect(aes(xmin = alpha, xmax = lead(alpha), ymin = 0, ymax = lead(upit)), 
               color="black", fill = "black", alpha = 0.3) +
     scale_x_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
-                       labels=c("0", "0.25", "0.5", "0.75", "1"))+
-    labs(x='Probability Integral Transform',
-         y='Density') +
+                       labels=c("0", "0.25", "0.5", "0.75", "1")) +
+    labs(x='Probability Integral Transform', y='Density') +
     geom_segment(aes(x=0,xend=1,y=1,yend=1), linetype="dashed", color="black") +
     theme_gray(base_size=16)
-  
 }
 
 b <- subset(df, location!='US' & model=='EWA')
 #b <- add_truth(b)
 upit_histogram(b)
+upit_histogram(subset(b, quantile %in% seq(0, 1, 0.05)))
+upit_histogram(b, seq(0, 1, 0.05))
 
-df <- add_truth(df)
-
-upit_histogram(subset(df, location!='US' & model=='QRA2'))
+c <- subset(b, quantile %in% seq(0, 1, 0.05))
 
 
-bins <- subset(df, location!='US' & model=='QRA2') %>%
-  group_by(target_end_date, location) %>%
-  summarize(bin = get_bin(truth, value, quantile))
+upit_histogram(subset(df, location!='US' & model=='QRA2' & window_size==4))
+upit_histogram(subset(df, location!='US' & model=='MED'))
+upit_histogram(subset(df, location!='US' & model=='V2'))
+upit_histogram(subset(df, location!='US' & model == 'Baseline' & window_size==4))
+upit_histogram(subset(df, location!='US' & model == 'GQRA2' & window_size==4))
+upit_histogram(subset(df, location!='US' & model == 'INV' & window_size==4))
+upit_histogram(subset(df, location!='US' & model == 'V4' & window_size==4))
+upit_histogram(subset(df, location!='US' & model == 'QRA3' & window_size==4))
 
-e <- t(sapply(bins$bin, FUN=get_bounds))
-e <- data.frame(e)
-e$val <- 1/(nrow(bins)*(e$X2 - e$X1))
+upit_histogram(subset(df, location!='US' & model == 'Baseline' & window_size==4))
+upit_histogram(subset(df, location!='US' & model == 'Baseline' & window_size==4), seq(0, 1, 0.05))
+upit_histogram(subset(df, location!='US' & model == 'Baseline' & window_size==4), seq(0, 1, 0.1))
 
-# results <- data.frame(alpha=c(unique(df$quantile), 1))
-results <- data.frame(alpha=c(.1, .2, .3, .4, .5, .6, .7, .8, .9, 1))
-results$upit <- sapply(results$alpha, FUN=get_upit, temp=e)
-results <- bind_rows(results, data.frame(alpha=0, upit=0))
-results <- arrange(results, alpha)
+
