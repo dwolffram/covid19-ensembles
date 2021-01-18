@@ -1,4 +1,4 @@
-setwd("/home/dwolffram/covid19-ensembles")
+setwd("/home/wolffram/covid19-ensembles")
 source("data_loading.R")
 
 df <- load_truth()

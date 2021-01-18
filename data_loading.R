@@ -1,4 +1,4 @@
-setwd("/home/dwolffram/covid19-ensembles")
+setwd("/home/wolffram/covid19-ensembles")
 
 path_hub <- "../covid19-forecast-hub/"
 
