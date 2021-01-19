@@ -25,6 +25,11 @@ f <- function(k) {
   function(y) seq(floor(min(y)), ceiling(max(y)), by = step)       
 }
 
+f <- function(k) {
+  step <- k
+  function(y) seq(0, 1.75, by = step)       
+}
+
 
 upit_histogram <- function(df, ..., breaks, xlab='Probability Integral Transform', ylab='Density'){
   index_cols <- enquos(...)
@@ -52,7 +57,8 @@ upit_histogram <- function(df, ..., breaks, xlab='Probability Integral Transform
     scale_x_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
                        labels = function(x) ifelse(x == 0, "0", x)) +
                        #labels=c("0", "0.25", "0.5", "0.75", "1")) +
-    scale_y_continuous(breaks = f(0.5), labels = function(y) ifelse(y == 0, "0", y)) +
+    scale_y_continuous(breaks = f(0.5), limits = c(0, 1.75), labels = function(y) ifelse(y == 0, "0", y)) +
+    #ylim(0, 1.75) +
     labs(x=xlab, y=ylab) +
     geom_segment(aes(x=0,xend=1,y=1,yend=1), linetype="dashed", color="black") +
     theme_gray(base_size=12)
