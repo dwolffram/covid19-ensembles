@@ -1,4 +1,5 @@
-setwd("/home/wolffram/covid19-ensembles")
+# setwd("/home/wolffram/covid19-ensembles")
+setwd("D:/Dokumente/Workspace2/covid19-ensembles")
 
 library(ggplot2)
 library(tidyverse)
@@ -19,7 +20,13 @@ get_upit <-function(temp, alpha){
   return(sum(subset(temp, X1 < alpha & alpha <= X2)$val))
 }
 
-upit_histogram <- function(df, ..., breaks){
+f <- function(k) {
+  step <- k
+  function(y) seq(floor(min(y)), ceiling(max(y)), by = step)       
+}
+
+
+upit_histogram <- function(df, ..., breaks, xlab='Probability Integral Transform', ylab='Density'){
   index_cols <- enquos(...)
   
   if(!missing(breaks)){
@@ -43,8 +50,10 @@ upit_histogram <- function(df, ..., breaks){
     geom_rect(aes(xmin = alpha, xmax = lead(alpha), ymin = 0, ymax = lead(upit)), 
               color="black", fill = "black", alpha = 0.3) +
     scale_x_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
-                       labels=c("0", "0.25", "0.5", "0.75", "1")) +
-    labs(x='Probability Integral Transform', y='Density') +
+                       labels = function(x) ifelse(x == 0, "0", x)) +
+                       #labels=c("0", "0.25", "0.5", "0.75", "1")) +
+    scale_y_continuous(breaks = f(0.5), labels = function(y) ifelse(y == 0, "0", y)) +
+    labs(x=xlab, y=ylab) +
     geom_segment(aes(x=0,xend=1,y=1,yend=1), linetype="dashed", color="black") +
-    theme_gray(base_size=16)
+    theme_gray(base_size=12)
 }
