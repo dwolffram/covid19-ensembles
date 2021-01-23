@@ -151,7 +151,7 @@ upit_histogram(df, index)
 
 
 size=5
-mu=75
+mu=150
 F <- qnbinom(p=alphas, size=size, mu=mu)
 ps <- pnbinom(F, size=size, mu=mu)
 
@@ -183,6 +183,27 @@ upit_histogram(df, index)
 upit_histogram(df, index, breaks=round(seq(0, 0.9, .05), 2))
 
 hist(sample)
+
+### 23 quantiles
+alphas <- c(0.02,0.05,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9)
+alphas <- sort(c(unique(c(alphas/2, 1-alphas/2)),0.5))
+sample <- rnorm(5000, 0, 1)
+
+# 0.8, 1.2
+F <- qnorm(p=alphas, 0, 0.8)
+F <- data.frame(quantile=alphas, value=F)
+
+df <- bind_rows(replicate(length(sample), F, simplify = FALSE))
+df$truth <- rep(sample, each=length(alphas))
+df$index <- rep(1:length(sample), each=length(alphas))
+
+upit_histogram(df, index, xlab="uPIT")
+
+ggsave('plots/examples/uPIT/upit_norm_23alphas_underdispersed.png', width=9, height=6, dpi=500, unit='cm', device='png')
+
+upit_histogram(df, index, breaks=seq(0, 1, 0.1), xlab="uPIT")
+ggsave('plots/examples/uPIT/upit_norm_10alphas_underdispersed.png', width=9, height=6, dpi=500, unit='cm', device='png')
+
 
 ### SIMULATION
 
@@ -269,5 +290,6 @@ upit_histogram(subset(df, location!='US' & model == 'QRA3' & window_size==4))
 upit_histogram(subset(df, location!='US' & model == 'Baseline' & window_size==4))
 upit_histogram(subset(df, location!='US' & model == 'Baseline' & window_size==4), seq(0, 1, 0.05))
 upit_histogram(subset(df, location!='US' & model == 'Baseline' & window_size==4), seq(0, 1, 0.1))
+
 
 

@@ -4,14 +4,20 @@ library(ggplot2)
 
 df <- load_forecasts()
 
-df <- load_forecasts(targets = c("1 wk ahead inc death"))
+df <- load_forecasts(targets = c("1 wk ahead cum death"))
 
 
 get_available_models <- function(df, target="1 wk ahead cum death", exclude_gaps=FALSE, 
-                                 min_no_locations=50, drop_incomplete=FALSE){
+                                 min_no_submission=3, min_no_locations=50, drop_incomplete=FALSE){
   # pick target
   temp <- df %>%
     filter(target == !!target)
+  
+  temp <- temp %>%
+    group_by(model) %>%
+    mutate(n = n_distinct(target_end_date)) %>%
+    filter(n >= min_no_submission)%>%
+    select(-n)
   
   # number of locations
   temp <- temp %>% 
@@ -69,7 +75,10 @@ plot_availability <- function(df, target="1 wk ahead cum death", exclude_gaps=FA
       scale_fill_manual(values=c("1"="red", "0"="darkgreen", "-1"="orange"), 
                         name = element_blank(), labels = c("Available", "Missing", "< 50 Locations")) +
       scale_x_date(breaks = seq(min(temp$target_end_date), max(temp$target_end_date), by="week")[c(FALSE, TRUE)]) +
-      labs(x="Target End Date", y="Model", title= paste0("Forecast Availability (", target, ")")))
+      labs(x="Target End Date", y="Model", title= paste0("Forecast Availability (", target, ")")))+
+      theme_gray(base_size=8) +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+      
 }
 
 plot_availability(df, target = "1 wk ahead cum death")
@@ -84,7 +93,20 @@ plot_availability(df, target = "1 wk ahead inc death")
 plot_availability(df, target = "1 wk ahead inc death", exclude_gaps = TRUE)
 plot_availability(df, target = "1 wk ahead inc death", drop_incomplete = TRUE, exclude_gaps = TRUE)
 
+ggsave('plots/model_availability2.png', width=16, height=20, dpi=800, unit='cm', device='png')
 
+
+a <- df %>%
+  group_by(model) %>%
+  summarize(n = n_distinct(target_end_date))
+
+b <- df %>%
+  group_by(model) %>%
+  mutate(n = n_distinct(target_end_date)) %>%
+  filter(n>2) %>%
+  select(-n)%>%
+  group_by(model) %>%
+  summarize(n = n_distinct(target_end_date))
 
 available_models <- get_available_models(df, target="1 wk ahead cum death", 
                                          drop_incomplete=TRUE, exclude_gaps=TRUE)

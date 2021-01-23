@@ -40,3 +40,5 @@ ggsave('plots/examples/PIT/pit_pos_bias.png', width=6, height=6, dpi=500, unit='
 pits <- pnorm(s, -1, 1)
 pit_histogram(pits)
 ggsave('plots/examples/PIT/pit_neg_bias.png', width=6, height=6, dpi=500, unit='cm', device='png')
+
+
