@@ -32,7 +32,7 @@ length(unique(df$target_end_date))
 no_cores <- 32
 registerDoParallel(cores=no_cores)  
 
-ensembles <- c("EWA", "MED", "V2", "V3", "V4", "QRA2", "QRA3", 
+ensembles <- c("EWA", "MED", "INV", "V2", "V3", "V4", "QRA2", "QRA3", 
                "QRA4", "GQRA2", "GQRA3", "GQRA4")
 window_sizes <- 1:4
 

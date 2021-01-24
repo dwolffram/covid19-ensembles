@@ -50,11 +50,13 @@ remove_revisions <- function(df, window_size=4){
 }
 
 add_location_names <- function(df){
-  locations <- read.csv('data/locations.csv')
-  locations <- locations %>%
-    select(-c(abbreviation, population))
-  
-  df <- left_join(df, locations, by="location")
+  if(!("location_name" %in% colnames(df))){
+    locations <- read.csv('data/locations.csv')
+    locations <- locations %>%
+      select(-c(abbreviation, population))
+    
+    df <- left_join(df, locations, by="location")
+  }
   return(df)
 }
 
@@ -177,7 +179,8 @@ load_ensembles <- function(filename, add_truth=FALSE, add_baseline=FALSE,
     df_baseline <- load_forecasts(models = c("COVIDhub-baseline"), targets = unique(df$target),
                                   exclude_locations = c("11", "60", "66", "69", "72", "74", "78"), 
                                   start_date = min(df$target_end_date), 
-                                  end_date = max(df$target_end_date))%>% 
+                                  end_date = max(df$target_end_date),
+                                  add_location_names = FALSE)%>% 
       select (-c(forecast_date, type))
     
     df_baseline$model <- 'Baseline'
@@ -223,7 +226,7 @@ load_scores <- function(filename, scores=c('ae', 'wis', 'wis_decomposition'),
                    location = col_character()
                  )
   ) %>%
-    pivot_longer(cols=-any_of(c("target_end_date", "location", "target",  "model",  "window_size",  "truth")),
+    pivot_longer(cols=-any_of(c("target_end_date", "location", "location_name", "target",  "model",  "window_size",  "truth")),
                  names_to="score") %>%
     filter(score %in% scores) %>%
     as.data.frame()
