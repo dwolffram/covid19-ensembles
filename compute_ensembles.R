@@ -22,7 +22,7 @@ models <- c("CovidAnalytics-DELPHI", "COVIDhub-baseline", "CU-select", "JHU_IDD-
 
 exclude_locations <- c("11", "60", "66", "69", "72", "74", "78")
 
-df <- load_forecasts(models=models, targets=c("1 wk ahead cum death"),
+df <- load_forecasts(models=models, targets=c("4 wk ahead cum death"),
                      exclude_locations=exclude_locations, start_date="2020-05-23",
                      intersect_dates=TRUE)
 
@@ -41,6 +41,8 @@ window_sizes <- 1:4
 df_ensembles <- ensemble_forecasts(df, window_sizes=window_sizes, ensembles=ensembles)
 
 file_name <- paste0("data/ensemble_forecasts/df_ensembles_1wk_", Sys.Date(), ".csv")
+file_name <- paste0("data/ensemble_forecasts/df_ensembles_4wk_", Sys.Date(), ".csv")
+
 write.csv(df_ensembles, file_name, row.names=FALSE)
 
 
