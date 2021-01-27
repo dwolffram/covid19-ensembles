@@ -44,13 +44,13 @@ upit_histogram <- function(df, ..., facet, breaks, xlab='Probability Integral Tr
   results$model <- recode_factor(results$model, "COVIDhub-baseline"="Baseline")
   results$model <- fct_relevel(results$model, "Baseline", after = Inf)
   
-  # results$model <- factor(results$model, levels=intersect(c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4', 
-  #                                                           'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
-  #                                                           'Baseline'),
-  #                                                         unique(results$model)))
-  # try(results$model <- factor(results$model, labels=c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]", 
-  #                                                 "QRA[2]", "QRA[3]", "QRA[4]", "Baseline")),
-  #     silent=TRUE)
+  results$model <- factor(results$model, levels=intersect(c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
+                                                            'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
+                                                            'Baseline'),
+                                                          unique(results$model)))
+  try(results$model <- factor(results$model, labels=c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]",
+                                                  "QRA[2]", "QRA[3]", "QRA[4]", "Baseline")),
+      silent=TRUE)
   
   ggplot(results, aes(alpha, upit)) + 
     geom_rect(aes(xmin = alpha, xmax = lead(alpha), ymin = 0, ymax = lead(upit)), 
@@ -69,6 +69,9 @@ upit_histogram <- function(df, ..., facet, breaks, xlab='Probability Integral Tr
 df <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk_noUS.csv", add_baseline = TRUE, 
                      remove_revisions=TRUE, add_truth=TRUE)
 
+df <- load_ensembles("data/ensemble_forecasts/df_ensembles_4wk_noUS.csv", add_baseline = TRUE, 
+                     remove_revisions=TRUE, add_truth=TRUE)
+
 b <- subset(df, location!='US' & model=='EWA' & window_size==4)
 upit_histogram(b, target_end_date, location)
 
@@ -77,7 +80,20 @@ c <- subset(df,  location!='US' & window_size==4)
 upit_histogram(c, model, target_end_date, location, facet=model, scales="free_y")
 upit_histogram(c, target_end_date, location, facet=model, breaks=seq(0, 1, 0.1))
 
-ggsave('plots/1wk_ahead/upit_ensembles_1wk.png', width=14, height=14, dpi=500, unit='cm', device='png')
+
+upit_histogram(subset(df, location != "US" & window_size==4), model, target_end_date, location, 
+               facet=model, scales="free_y", base_size=12)
+
+upit_histogram(subset(df, location != "US" & window_size==4), model, target_end_date, location, 
+               facet=model, scales="fixed",
+               breaks=seq(0, 1, 0.1), base_size=12)
+
+upit_histogram(subset(df, location != "US" & window_size==4), model, target_end_date, location, 
+               facet=model, scales="free_y",
+               breaks=seq(0, 1, 0.05), base_size=12)
+
+ggsave('plots/1wk_ahead/upit_ensembles_1wk_23.png', width=15.5, height=18, dpi=500, unit='cm', device='png')
+ggsave('plots/4wk_ahead/upit_ensembles_4wk_20.png', width=15.5, height=18, dpi=500, unit='cm', device='png')
 
 upit_histogram(subset(c, location_name=="New York"), target_end_date, location, facet=model, breaks=seq(0, 1, 0.1))
 
@@ -117,16 +133,35 @@ df <- load_forecasts(models = c("CovidAnalytics-DELPHI", "COVIDhub-baseline", "C
   select(-c(forecast_date, type)) %>%
   select(target_end_date, everything())
 
+# 4 wk ahead
+
+df <- load_forecasts(models = c("CovidAnalytics-DELPHI", "COVIDhub-baseline", "CU-select", 
+                                           "JHU_IDD-CovidSP", "LANL-GrowthRate", "MOBS-GLEAM_COVID", 
+                                           "PSI-DRAFT", "UCLA-SuEIR", "UMass-MechBayes", "YYG-ParamSearch"),
+                                targets = "4 wk ahead cum death",
+                                exclude_locations = c("11", "60", "66", "69", "72", "74", "78"), 
+                                start_date = "2020-08-01", 
+                                end_date = "2020-10-31",
+                                add_truth=TRUE) %>% 
+  select(-c(forecast_date, type)) %>%
+  select(target_end_date, everything())
+
 df$model <- factor(df$model)
 df$model <- recode_factor(df$model, "COVIDhub-baseline"="Baseline")
 df$model <- fct_relevel(df$model, "Baseline", after = Inf)
 levels(df$model)
 
-upit_histogram(subset(df, location != "US"), model, target_end_date, location, facet=model, scales="free_y")
-upit_histogram(subset(df, location != "US"), model, target_end_date, location, facet=model, scales="free_y",
-               breaks=seq(0, 1, 0.1), base_size=11)
+df <- add_truth(df)
 
-ggsave('plots/1wk_ahead/upit_individual_1wk.png', width=14.9, height=14, dpi=500, unit='cm', device='png')
+upit_histogram(subset(df, location != "US"), model, target_end_date, location, facet=model, scales="free_y", base_size=12)
+upit_histogram(subset(df, location != "US"), model, target_end_date, location, facet=model, scales="free_y",
+               breaks=seq(0, 1, 0.1), base_size=12)
+
+upit_histogram(subset(df, location != "US"), model, target_end_date, location, facet=model, scales="free_y",
+               breaks=seq(0, 1, 0.05), base_size=12)
+
+ggsave('plots/1wk_ahead/upit_individual_1wk_20.png', width=15.5, height=18, dpi=500, unit='cm', device='png')
+ggsave('plots/4wk_ahead/upit_individual_4wk_20.png', width=15.5, height=18, dpi=500, unit='cm', device='png')
 
 
 upit_histogram(subset(df, location != "US" & model == "UCLA-SuEIR"), model, target_end_date, location, 
