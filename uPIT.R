@@ -383,3 +383,53 @@ ggplot(results, aes(alpha, upit)) +
   theme_gray(base_size=12)
 
 
+upit_histogram <- function(df, ..., facet, breaks, xlab='Probability Integral Transform', ylab='Density'){
+  index_cols <- enquos(...)
+  
+  try(facet <- ensym(facet), silent=TRUE) # if NULL: no facetting
+  
+  if(!missing(breaks)){
+    df <- subset(df, quantile %in% round(breaks, 3))
+  }
+  
+  results <- data.frame()
+  for (m in models){
+    temp <- subset(df, model==m) %>%
+      group_by(!!!index_cols) %>%
+      summarize(bin = get_bin(truth, value, quantile))
+    
+    temp <- t(sapply(temp$bin, FUN=get_bounds))
+    temp <- data.frame(temp)
+    temp$val <- 1/(nrow(temp)*(temp$X2 - temp$X1))
+    
+    results_m <- data.frame(alpha=c(unique(df$quantile), 1))
+    results_m$upit <- sapply(results_m$alpha, FUN=get_upit, temp=temp)
+    results_m <- bind_rows(results_m, data.frame(alpha=0, upit=0))
+    results_m <- arrange(results_m, alpha)
+    results_m$model <- m
+    results <- bind_rows(results, results_m)
+  }
+  
+  results$model <- factor(results$model, levels=intersect(c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4', 
+                                                            'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
+                                                            'Baseline'),
+                                                          unique(results$model)))
+  results$model <- factor(results$model, labels=c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]", 
+                                            "QRA[2]", "QRA[3]", "QRA[4]", "Baseline"))
+  
+  ggplot(results, aes(alpha, upit)) + 
+    geom_rect(aes(xmin = alpha, xmax = lead(alpha), ymin = 0, ymax = lead(upit)), 
+              color="black", fill = "black", alpha = 0.3)+
+    facet_wrap(facet, ncol=3, scales="free_y", labeller=label_parsed) +
+    scale_x_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
+                       labels = function(x) ifelse(x == 0, "0", x)) +
+    #labels=c("0", "0.25", "0.5", "0.75", "1")) +
+    scale_y_continuous(breaks = f(0.5), labels = function(y) ifelse(y == 0, "0", y)) +
+    #ylim(0, 1.75) +
+    labs(x="uPIT", y="Density") +
+    geom_segment(aes(x=0,xend=1,y=1,yend=1), linetype="dashed", color="black") +
+    theme_gray(base_size=12)
+}
+
+upit_histogram(c, target_end_date, location, facet=model)
+upit_histogram(c, target_end_date, location, facet=model, breaks=seq(0, 1, 0.1))
