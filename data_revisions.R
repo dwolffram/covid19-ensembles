@@ -1,6 +1,8 @@
 setwd("/home/wolffram/covid19-ensembles")
 source("data_loading.R")
 
+Sys.setlocale("LC_TIME", "C")
+
 df <- load_truth()
 df <- subset(df, weekdays(df$date)=='Saturday')
 df$type = 'latest'
