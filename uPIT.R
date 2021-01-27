@@ -1,4 +1,4 @@
-# setwd("/home/wolffram/covid19-ensembles")
+setwd("/home/wolffram/covid19-ensembles")
 setwd("D:/Dokumente/Workspace2/covid19-ensembles")
 
 library(ggplot2)
@@ -259,7 +259,7 @@ qpois(p=alphas, lambda=1500)
 
 ### COVID-FORECASTS
 source("data_loading.R")
-df <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk.csv", add_baseline = TRUE, 
+df <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk_noUS.csv", add_baseline = TRUE, 
                      remove_revisions=TRUE, add_truth=TRUE)
 
 seq(0, 1, 0.05)
@@ -267,13 +267,15 @@ unique(df$quantile)[unique(df$quantile) %in% seq(0, 1, 0.05)]
 unique(df$quantile)[unique(df$quantile) %in% round(seq(0, 1, 0.05), 3)]
 
 
+upit_histogram(df, model, target_end_date, location)
+upit_histogram(subset(df, model=="EWA"), target_end_date, location)
 
 
-b <- subset(df, location!='US' & model=='EWA')
+b <- subset(df, location!='US' & model=='EWA' & window_size==4)
 upit_histogram(b, target_end_date, location)
 
 upit_histogram(subset(b, quantile %in% seq(0, 1, 0.05)))
-upit_histogram(b, seq(0, 1, 0.05))
+upit_histogram(b, target_end_date, location, breaks=seq(0, 1, 0.1))
 
 c <- subset(b, quantile %in% seq(0, 1, 0.05))
 
@@ -291,5 +293,93 @@ upit_histogram(subset(df, location!='US' & model == 'Baseline' & window_size==4)
 upit_histogram(subset(df, location!='US' & model == 'Baseline' & window_size==4), seq(0, 1, 0.05))
 upit_histogram(subset(df, location!='US' & model == 'Baseline' & window_size==4), seq(0, 1, 0.1))
 
+
+
+c <- subset(df,  location!='US' & window_size==4)
+
+temp <- a %>%
+  group_by(model, target_end_date, location) %>%
+  summarize(bin = get_bin(truth, value, quantile))
+
+model_index <- temp$model
+
+temp <- t(sapply(temp$bin, FUN=get_bounds))
+temp <- data.frame(temp)
+temp$model <- model_index
+
+temp <- temp %>%
+  group_by(model) %>%
+  mutate(val=(1/n()) * (X2 - X1), n=n())
+
+
+alphas <- c(unique(df$quantile), 1)
+models <- unique(a$model)
+results <- data.frame(model=rep(models, each=length(alphas)), alpha=rep(alphas, length(models)))
+
+results %>%
+  group_by(model, alpha) %>%
+  summarize(upit=model)
+
+results <- results %>%
+  group_by(model, alpha) %>%
+  summarize(upit=get_upit(subset(temp, model == first(model) ), alpha))
+
+results <- results %>%
+  group_by(model, alpha) %>%
+  summarize(upit=get_upit(subset(temp, model == .$model[1] ), alpha))
+
+
+a <- subset(c, quantile %in% round(seq(0, 1, 0.1), 3))
+a <- c
+results <- data.frame()
+for (m in models){
+  print(m)
+  
+  temp <- subset(a, model==m) %>%
+    group_by(target_end_date, location) %>%
+    summarize(bin = get_bin(truth, value, quantile))
+  
+  temp <- t(sapply(temp$bin, FUN=get_bounds))
+  temp <- data.frame(temp)
+  temp$val <- 1/(nrow(temp)*(temp$X2 - temp$X1))
+  
+  results_m <- data.frame(alpha=c(unique(a$quantile), 1))
+  results_m$upit <- sapply(results_m$alpha, FUN=get_upit, temp=temp)
+  results_m <- bind_rows(results_m, data.frame(alpha=0, upit=0))
+  results_m <- arrange(results_m, alpha)
+  results_m$model <- m
+  results <- bind_rows(results, results_m)
+}
+
+results$model <- factor(results$model, levels=intersect(c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4', 
+                                                'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
+                                                'Baseline'),
+                                              unique(results$model)))
+
+ggplot(subset(results, model=="EWA"), aes(alpha, upit)) + 
+  geom_rect(aes(xmin = alpha, xmax = lead(alpha), ymin = 0, ymax = lead(upit)), 
+            color="black", fill = "black", alpha = 0.3)+
+  facet_wrap('model', ncol=3) +
+  scale_x_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
+                     labels = function(x) ifelse(x == 0, "0", x)) +
+  #labels=c("0", "0.25", "0.5", "0.75", "1")) +
+  scale_y_continuous(breaks = f(0.5), labels = function(y) ifelse(y == 0, "0", y)) +
+  #ylim(0, 1.75) +
+  labs(x="uPIT", y="Density") +
+  geom_segment(aes(x=0,xend=1,y=1,yend=1), linetype="dashed", color="black") +
+  theme_gray(base_size=12)
+
+ggplot(results, aes(alpha, upit)) + 
+  geom_rect(aes(xmin = alpha, xmax = lead(alpha), ymin = 0, ymax = lead(upit)), 
+            color="black", fill = "black", alpha = 0.3)+
+  facet_wrap('model', ncol=3, scales="free_y") +
+  scale_x_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
+                     labels = function(x) ifelse(x == 0, "0", x)) +
+  #labels=c("0", "0.25", "0.5", "0.75", "1")) +
+  scale_y_continuous(breaks = f(0.5), labels = function(y) ifelse(y == 0, "0", y)) +
+  #ylim(0, 1.75) +
+  labs(x="uPIT", y="Density") +
+  geom_segment(aes(x=0,xend=1,y=1,yend=1), linetype="dashed", color="black") +
+  theme_gray(base_size=12)
 
 
