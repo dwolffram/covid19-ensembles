@@ -111,8 +111,8 @@ plot_wis <- function(df, models, locations, window_sizes, x='window_size',
                      facet, facet_row=location_name, facet_col=model,
                      start_date='1900-01-01', end_date='3000-01-01',
                      kind='bar', outlier.shape=NA,
-                     ncol=4, dir='v', scales='fixed', angle=0, vjust=0,
-                     export=FALSE){
+                     ncol=4, dir='v', scales='fixed', angle=0, vjust=0, hjust=0,
+                     title, export=FALSE){
   x <- ensym(x)
   
   try(facet <- ensym(facet), silent=TRUE) # if NULL: no facetting
@@ -162,6 +162,10 @@ plot_wis <- function(df, models, locations, window_sizes, x='window_size',
   
   plot_title <- paste0(plot_title, " - from ", start_date, " until ", end_date)
   
+  if(!missing(title)){
+    plot_title <- title
+  }
+  
   if(export){
     filename <- str_replace_all(plot_title, ' ', '_')
     filename <- paste(kind,
@@ -174,16 +178,15 @@ plot_wis <- function(df, models, locations, window_sizes, x='window_size',
                       sep='_')
     print(filename)
   }
-  
 
   switch(kind,
          'bar' = {
            g <- ggplot(subset(df, score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
                        aes(x=!!x, y=value,
                            fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
-             geom_bar(position="stack", stat="summary", fun.y="sum", width=0.7) +
+             geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
              theme_gray(base_size=18) +
-             theme(axis.text.x=element_text(vjust=vjust, angle=angle)) +
+             theme(axis.text.x=element_text(vjust=vjust, angle=angle, hjust=hjust)) +
              scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
                                 labels = c("Overprediction", "Dispersion", "Underprediction"))
          },
@@ -194,7 +197,7 @@ plot_wis <- function(df, models, locations, window_sizes, x='window_size',
              stat_summary(fun.y=mean, geom="point", shape=3) +
              scale_fill_viridis(discrete = TRUE, alpha=0.5) +
              theme_gray(base_size=18) +
-             theme(axis.text.x=element_text(vjust=vjust, angle=angle), legend.position = "none")
+             theme(axis.text.x=element_text(vjust=vjust, angle=angle, hjust=hjust), legend.position = "none")
          })
   
   g <- g + 
@@ -202,7 +205,7 @@ plot_wis <- function(df, models, locations, window_sizes, x='window_size',
     {if(missing(facet)) facet_grid(rows=enquos(facet_row), cols=enquos(facet_col), scales=scales)} +
     labs(title= plot_title,
          x = xlabel,
-         y = "WIS") #+
+         y = "Mean WIS") #+
   # theme(plot.title= element_text(size=9),
   #       axis.text = element_text(size = 4))
   
