@@ -134,7 +134,6 @@ scale_x_reordered <- function(..., sep = "___") {
 ggplot(subset(df, score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
        aes(x=reorder_within(model, value, target), y=value,
            fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
-  #scale_x_discrete(l) +
   scale_x_reordered() +
   geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
   facet_wrap("target", scales="free", drop=TRUE) +
@@ -147,4 +146,4 @@ ggplot(subset(df, score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")),
        y = "Mean WIS")# +
 #coord_flip()
 
-ggsave('plots/1wk_ahead/1wk_wis_ensembles.png', width=10, height=7, dpi=500, unit='cm', device='png')
+ggsave('plots/1and4wk_wis_ensembles.png', width=15.5, height=7, dpi=500, unit='cm', device='png')
