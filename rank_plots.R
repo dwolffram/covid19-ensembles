@@ -1,7 +1,12 @@
-df <- load_scores("scores/ensemble_scores_1wk.csv", remove_revisions=TRUE)
+df <- load_scores("scores/ensemble_scores_1wk_noUS.csv", remove_revisions=TRUE)
+df <- load_scores("scores/individual_scores_1wk.csv", remove_revisions=TRUE)
+
 
 temp <- df %>%
   filter(window_size==4, location!="US")
+
+temp <- df %>%
+  filter(location!="US")
 
 temp %>%
   group_by(target_end_date, model) %>%

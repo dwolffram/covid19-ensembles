@@ -15,8 +15,22 @@ df <- load_scores("scores/ensemble_scores_1wk_noUS.csv", remove_revisions=TRUE, 
 df <- load_scores("scores/ensemble_scores_4wk.csv", remove_revisions=TRUE, long_format=TRUE)
 df <- load_scores("scores/ensemble_scores_4wk_noUS.csv", remove_revisions=TRUE, long_format=TRUE)
 
-df_individual <- load_scores("scores/individual_scores_1wk.csv", long_format=TRUE)
 
+df <- load_scores("scores/ensemble_scores_1wk_noUS.csv", remove_revisions=FALSE, long_format=TRUE)
+df$model <- factor(df$model, labels=c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]", 
+                                          "QRA[2]", "QRA[3]", "QRA[4]", "Baseline"))
+
+plot_state_contribution(subset(df, window_size==4), 3, title=NULL)
+ggsave('plots/revisions_percentage.png', width=14, height=7, dpi=500, unit='cm', device='png')
+
+
+a <- df %>%
+  filter(location!="US" & window_size==4 & score=='wis' & model %in% c("EWA", "MED", "INV", "QRA2", "GQRA2")) %>%
+  group_by(target_end_date, model) %>%
+  summarize(value = mean(value))
+
+ggplot(a, aes(x=target_end_date, y=value, group=model)) +
+  geom_line(aes(color=model))
 
 ### WIS DECOMPOSITION
 
@@ -90,3 +104,15 @@ plot_wis(df, kind='box', locations='national', window_sizes=4, x=model, facet=lo
 
 # plot_wis(df, locations='states', window_sizes=4, x=model, facet=window_size, kind='box') + 
 #   coord_cartesian(ylim=c(0, 50))
+
+
+### INDIVIDUAL MODELS
+
+
+df <- load_scores("scores/individual_scores_1wk.csv", long_format=TRUE)
+df$model <- factor(df$model)
+plot_state_contribution(df, 3, title=NULL)
+
+ggsave('plots/revisions_percentage.png', width=14, height=8, dpi=500, unit='cm', device='png')
+plot_wis(df, locations='states', x=model, facet=NULL, angle=90, vjust=0.5, hjust=1, title=NULL)
+

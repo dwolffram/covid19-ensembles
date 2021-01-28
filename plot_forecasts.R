@@ -12,7 +12,14 @@ df <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk_noUS.csv",
 
 plot_forecast(df, window_sizes=4, models=c('V4', 'QRA4'),
               locations=c('US', 36), incidence=TRUE,
-              scales='free_y')
+              scales='free_y', base_size=12)
+
+plot_forecast(df, window_sizes=4, models=c('EWA', 'QRA2', 'Baseline'),
+              locations=c(34, 36, 48), incidence = FALSE, end_date = "2020-08-20",
+              scales='free_y', base_size=12, title=NULL)
+
+ggsave('plots/forecasts/revision_forecasts.png', width=15.5, height=10, dpi=500, unit='cm', device='png')
+
 
 plot_forecast(df, window_sizes=4,
               locations=c('US', 36), incidence=TRUE,

@@ -1,5 +1,6 @@
 library(ggplot2)
 library(viridis)
+library(scales)
 
 ### PLOT FORECASTS
 
@@ -16,6 +17,11 @@ plot_forecast <- function(df, models, locations, window_sizes,
   if(missing(models)){
     models <- unique(df$model)
   }  
+  
+  
+  # try(df$model <- factor(df$model, labels=c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]",
+  #                                           "QRA[2]", "QRA[3]", "QRA[4]", "Baseline")),
+  #     silent=TRUE)
   
   if(missing(locations)){
     locations <- unique(df$location)
@@ -84,17 +90,27 @@ plot_forecast <- function(df, models, locations, window_sizes,
     title = paste(horizon, "wk ahead forecasts with 50% and 90% prediction intervals")
   }
   
+
+  df$model <- factor(df$model, levels=c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
+                                        'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
+                                        'Baseline'),
+                     labels=c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]",
+                              "QRA[2]", "QRA[3]", "QRA[4]", "Baseline"))
+  df$location_name <- str_replace(df$location_name, " ", "~")
+  
+  
   ggplot(df, aes(x=target_end_date, y=truth)) +
     {if(!missing(facet)) facet_wrap(facet, ncol=ncol, dir=dir, scales=scales)} +
-    {if(missing(facet)) facet_grid(rows=enquos(facet_row), cols=enquos(facet_col), scales=scales)} +
+    {if(missing(facet)) facet_grid(rows=enquos(facet_row), cols=enquos(facet_col), scales=scales, labeller=label_parsed)} +
     geom_smooth(aes(y = value.0.5, ymin = value.0.05, ymax = value.0.95), 
-                linetype=2, size=0.5, fill=cols[2], alpha=1, stat = "identity") +
+                linetype=3, size=0.5, fill=cols[2], alpha=1, stat = "identity") +
     geom_smooth(aes(y = value.0.5, ymin = value.0.25, ymax = value.0.75),
-                linetype=2, size=0.5, fill=cols[1], alpha=1, stat = "identity") +
+                linetype=3, size=0.5, fill=cols[1], alpha=1, stat = "identity") +
     geom_line() +
     geom_point() +
     geom_point(aes(y = value.0.5), pch = 21, col = "black", bg = "white") +
     theme_bw() +
+    scale_x_date(date_breaks="1 months", date_labels = "%B") +
     #theme(axis.text.x=element_text(angle=45,hjust=1)) +
     labs(title=title,
          x = "Date",
@@ -112,7 +128,7 @@ plot_wis <- function(df, models, locations, window_sizes, x='window_size',
                      start_date='1900-01-01', end_date='3000-01-01',
                      kind='bar', outlier.shape=NA,
                      ncol=4, dir='v', scales='fixed', angle=0, vjust=0, hjust=0,
-                     title, export=FALSE){
+                     title, base_size=12, export=FALSE){
   x <- ensym(x)
   
   try(facet <- ensym(facet), silent=TRUE) # if NULL: no facetting
@@ -178,6 +194,14 @@ plot_wis <- function(df, models, locations, window_sizes, x='window_size',
                       sep='_')
     print(filename)
   }
+  
+  df$model <- factor(df$model, levels=intersect(c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
+                                                            'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
+                                                            'Baseline'),
+                                                          unique(df$model)))
+  try(df$model <- factor(df$model, labels=c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]",
+                                                      "QRA[2]", "QRA[3]", "QRA[4]", "Baseline")),
+      silent=TRUE)
 
   switch(kind,
          'bar' = {
@@ -185,7 +209,7 @@ plot_wis <- function(df, models, locations, window_sizes, x='window_size',
                        aes(x=!!x, y=value,
                            fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
              geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
-             theme_gray(base_size=18) +
+             theme_gray(base_size=base_size) +
              theme(axis.text.x=element_text(vjust=vjust, angle=angle, hjust=hjust)) +
              scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
                                 labels = c("Overprediction", "Dispersion", "Underprediction"))
@@ -196,7 +220,7 @@ plot_wis <- function(df, models, locations, window_sizes, x='window_size',
              geom_boxplot(outlier.shape=outlier.shape, width=0.5) +
              stat_summary(fun.y=mean, geom="point", shape=3) +
              scale_fill_viridis(discrete = TRUE, alpha=0.5) +
-             theme_gray(base_size=18) +
+             theme_gray(base_size=base_size) +
              theme(axis.text.x=element_text(vjust=vjust, angle=angle, hjust=hjust), legend.position = "none")
          })
   
@@ -219,9 +243,9 @@ plot_wis <- function(df, models, locations, window_sizes, x='window_size',
 }
 
 
-plot_state_contribution <- function(df, n_highest=5){
+plot_state_contribution <- function(df, n_highest=5, title="Relative Contribution to WIS "){
   df <- df %>%
-    filter(location!='US', score=='wis', window_size==4) %>%
+    filter(location!='US', score=='wis') %>%
     group_by(model, location) %>%
     summarize(value = sum(value))
   
@@ -242,8 +266,10 @@ plot_state_contribution <- function(df, n_highest=5){
     replace_na(list(location_name='Other'))
   
   ggplot(df, aes(x = model, y = value, fill=reorder(location_name, value))) + 
-    geom_bar(stat = "summary", position='fill', fun.y='sum') + 
+    geom_bar(stat = "summary", position='fill', fun=mean) + 
     scale_fill_viridis(discrete=TRUE, name = "State") +
-    labs(title = "Relative Contribution to WIS ", x = "Model", y = "Percentage of WIS") +
-    theme_gray(base_size=18)
+    labs(title = title, x = "Model", y = "Percentage of WIS")+
+    scale_x_discrete("Model", labels = parse(text = levels(df$model))) +
+    theme_gray(base_size=12)+
+    theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1))
 }
