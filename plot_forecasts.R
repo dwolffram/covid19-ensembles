@@ -16,7 +16,7 @@ plot_forecast(df, window_sizes=4, models=c('V4', 'QRA4'),
 
 plot_forecast(df, window_sizes=4, models=c('EWA', 'QRA2', 'Baseline'),
               locations=c(34, 36, 48), incidence = FALSE, end_date = "2020-08-20",
-              scales='free_y', base_size=12, title=NULL)
+              scales='free_y', base_size=12, title=NULL, ylab="Cumulative Deaths")
 
 ggsave('plots/forecasts/revision_forecasts.png', width=15.5, height=10, dpi=500, unit='cm', device='png')
 

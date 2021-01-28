@@ -6,7 +6,7 @@ library(scales)
 
 plot_forecast <- function(df, models, locations, window_sizes,
                           facet, facet_row=location_name, facet_col=model,
-                          incidence=FALSE, center=FALSE, title=NULL,
+                          incidence=FALSE, center=FALSE, title=NULL, ylab="Deaths",
                           start_date='1900-01-01', end_date='3000-01-01',
                           ncol=4, dir='v', scales='fixed', base_size=18){
   cols <- colorRampPalette(c("deepskyblue4", "lightgrey"))(2 + 1)[-1] # length(levels_coverage) + 1
@@ -103,18 +103,18 @@ plot_forecast <- function(df, models, locations, window_sizes,
     {if(!missing(facet)) facet_wrap(facet, ncol=ncol, dir=dir, scales=scales)} +
     {if(missing(facet)) facet_grid(rows=enquos(facet_row), cols=enquos(facet_col), scales=scales, labeller=label_parsed)} +
     geom_smooth(aes(y = value.0.5, ymin = value.0.05, ymax = value.0.95), 
-                linetype=3, size=0.5, fill=cols[2], alpha=1, stat = "identity") +
+                linetype=3, size=0.2, colour="white", fill=cols[2], alpha=1, stat = "identity") +
     geom_smooth(aes(y = value.0.5, ymin = value.0.25, ymax = value.0.75),
-                linetype=3, size=0.5, fill=cols[1], alpha=1, stat = "identity") +
+                linetype=3, size=0.2, colour="white", fill=cols[1], alpha=1, stat = "identity") +
     geom_line() +
-    geom_point() +
+    geom_point(pch = 4) +
     geom_point(aes(y = value.0.5), pch = 21, col = "black", bg = "white") +
     theme_bw() +
     scale_x_date(date_breaks="1 months", date_labels = "%B") +
     #theme(axis.text.x=element_text(angle=45,hjust=1)) +
     labs(title=title,
          x = "Date",
-         y = "Deaths") +
+         y = ylab) +
     theme_grey(base_size=base_size)#+
   # theme(plot.title= element_text(size=9),
   #       axis.text = element_text(size = 5)) 
@@ -128,7 +128,8 @@ plot_wis <- function(df, models, locations, window_sizes, x='window_size',
                      start_date='1900-01-01', end_date='3000-01-01',
                      kind='bar', outlier.shape=NA,
                      ncol=4, dir='v', scales='fixed', angle=0, vjust=0, hjust=0,
-                     title, base_size=12, export=FALSE){
+                     title, base_size=12, export=FALSE,
+                     yintercept=17.7734){
   x <- ensym(x)
   
   try(facet <- ensym(facet), silent=TRUE) # if NULL: no facetting
@@ -209,6 +210,7 @@ plot_wis <- function(df, models, locations, window_sizes, x='window_size',
                        aes(x=!!x, y=value,
                            fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
              geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
+             geom_hline(yintercept = yintercept, linetype = 'dashed', color="black") +
              theme_gray(base_size=base_size) +
              theme(axis.text.x=element_text(vjust=vjust, angle=angle, hjust=hjust)) +
              scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
@@ -225,8 +227,10 @@ plot_wis <- function(df, models, locations, window_sizes, x='window_size',
          })
   
   g <- g + 
-    {if(!missing(facet) & !is.null(facet)) facet_wrap(facet, ncol=ncol, dir=dir, scales=scales)} + # if facet is given
-    {if(missing(facet)) facet_grid(rows=enquos(facet_row), cols=enquos(facet_col), scales=scales)} +
+    {if(!missing(facet) & !is.null(facet)) facet_wrap(facet, ncol=ncol, dir=dir, scales=scales, 
+                                                      labeller=label_parsed)} + # if facet is given
+    {if(missing(facet)) facet_grid(rows=enquos(facet_row), cols=enquos(facet_col), scales=scales, 
+                                   labeller=label_parsed)} +
     labs(title= plot_title,
          x = xlabel,
          y = "Mean WIS") #+
