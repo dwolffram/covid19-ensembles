@@ -35,9 +35,13 @@ ggplot(a, aes(x=target_end_date, y=value, group=model)) +
 ### WIS DECOMPOSITION
 
 ## window size comparison
+17.7734
 
 plot_wis(df, locations='states', x=window_size, facet=model, 
-         ncol=3, dir='h', title=NULL, yintercept = 96.58747)
+         ncol=3, hjust=0.5, dir='h', title=NULL)
+
+plot_wis(df, locations='states', x=window_size, facet=model, 
+         ncol=3, hjust=0.5, dir='h', title=NULL, yintercept = 96.58747)
 
 ggsave('plots/1wk_ahead/1wk_wis_windowSizes.png', width=15.5, height=18, dpi=500, unit='cm', device='png')
 ggsave('plots/4wk_ahead/4wk_wis_windowSizes.png', width=15.5, height=18, dpi=500, unit='cm', device='png')
@@ -130,62 +134,49 @@ plot_wis(df, locations='states', x=model, facet=NULL, angle=90, vjust=0.5, hjust
 df1 <- load_scores("scores/ensemble_scores_1wk_noUS.csv", remove_revisions=TRUE, long_format=TRUE)
 df2 <- load_scores("scores/individual_scores_1wk.csv", remove_revisions=TRUE, long_format=TRUE)
 
+df1 <- load_scores("scores/ensemble_scores_4wk_noUS.csv", remove_revisions=TRUE, long_format=TRUE)
+df2 <- load_scores("scores/individual_scores_4wk.csv", remove_revisions=TRUE, long_format=TRUE)
+
 df1$type <- "Ensemble"
+df1[df1$model == "Baseline", ]$type <- "Individual Model"
 df2$type <- "Individual Model"
 
 df <- bind_rows(subset(df1, window_size == 4), df2) %>%
   filter(location != "US" & model != "COVIDhub-baseline") %>%
   select(-window_size)
 
-df$model <- factor(df$model)
 df$model <- factor(df$model, levels = c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
                                         'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
                                         "CovidAnalytics-DELPHI", "CU-select", "JHU_IDD-CovidSP", 
                                         "LANL-GrowthRate", "MOBS-GLEAM_COVID", "PSI-DRAFT", "UCLA-SuEIR", 
                                         "UMass-MechBayes", "YYG-ParamSearch", 'Baseline'),
-                   labels = c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]",
-                              "QRA[2]", "QRA[3]", "QRA[4]", "CovidAnalytics", "CU", "JHU_IDD", 
+                   labels = c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", 
+                              "GQRA[2]", "GQRA[3]", "GQRA[4]", "QRA[2]", "QRA[3]", "QRA[4]", 
+                              "DELPHI", "CU", "JHU_IDD", 
                               "LANL", "MOBS", "PSI", "UCLA", 
                               "UMass", "YYG", 'Baseline')) 
 
-# df$model <- factor(df$model, levels = c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
-#                                         'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
-#                                         "CovidAnalytics-DELPHI", "CU-select", "JHU_IDD-CovidSP", 
-#                                         "LANL-GrowthRate", "MOBS-GLEAM_COVID", "PSI-DRAFT", "UCLA-SuEIR", 
-#                                         "UMass-MechBayes", "YYG-ParamSearch", 'Baseline'),
-#                    labels = c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]",
-#                             "QRA[2]", "QRA[3]", "QRA[4]", "CovidAnalytics-DELPHI", "CU-select", "JHU_IDD-CovidSP", 
-#                             "LANL-GrowthRate", "MOBS-GLEAM_COVID", "PSI-DRAFT", "UCLA-SuEIR", 
-#                             "UMass-MechBayes", "YYG-ParamSearch", 'Baseline')) 
-
-toString(shQuote(unique(df2$model), type = "cmd"))
+# toString(shQuote(unique(df2$model), type = "cmd"))
 
 ggplot(subset(df, score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
             aes(x=reorder(model, value), y=value,
                 fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
   geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
-  theme_gray(base_size=12) +
-  theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1)) +
-  scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
+  theme_gray(base_size=10) +
+  theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1), 
+        legend.position = "right") +
+  scale_fill_viridis(discrete=TRUE, name = NULL,
                      labels = c("Overprediction", "Dispersion", "Underprediction"))+
   scale_x_discrete(labels = function(l) parse(text=l)) + 
-  labs(x = "Model",
+  labs(x = NULL,
        y = "Mean WIS")# +
   #coord_flip()
 
 ggsave('plots/1wk_ahead/1wk_wis_all.png', width=15.5, height=9, dpi=500, unit='cm', device='png')
+ggsave('plots/4wk_ahead/4wk_wis_all.png', width=15.5, height=9, dpi=500, unit='cm', device='png')
 
 
 
-df %>%
-  group_by(target_end_date, model) %>%
-  summarize(meanWIS = mean(wis))
-
-
-
-temp$model <- factor(temp$model, labels=c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]", 
-                                          "QRA[2]", "QRA[3]", "QRA[4]", "Baseline"))
-factor(temp$model)
 
 df_rank <- df %>%
   filter(score == "wis") %>%
@@ -201,15 +192,16 @@ df_rank <- df_rank %>%
   mutate(meanRank=mean(rank))
 
 ggplot(df_rank, aes(x=reorder(model, meanRank), fill=type, y=rank)) + 
-  geom_boxplot(alpha=0.5) +
+  geom_boxplot(alpha=0.5, outlier.size = 0.6) +
   scale_fill_manual(values=c("#009E73", "#D55E00")) +
   stat_summary(fun=mean, geom="point", shape=3, size=2) +
-  xlab("Model") +
+  #xlab("Model") +
   ylab("Rank") +
-  scale_x_discrete("Model", labels = parse(text = levels(reorder(df_rank$model, df_rank$meanRank))))+
-  theme_gray(base_size=12) +
+  scale_x_discrete(NULL, labels = parse(text = levels(reorder(df_rank$model, df_rank$meanRank))))+
+  theme_gray(base_size=10) +
   theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1), 
         legend.title = element_blank(), legend.position="top") 
 
-ggsave('plots/1wk_ahead/1wk_rank_all_byState.png', width=15.5, height=12, dpi=500, unit='cm', device='png')
+ggsave('plots/1wk_ahead/1wk_rank_all.png', width=15.5, height=10, dpi=500, unit='cm', device='png')
+ggsave('plots/4wk_ahead/4wk_rank_all_byState.png', width=15.5, height=10, dpi=500, unit='cm', device='png')
 

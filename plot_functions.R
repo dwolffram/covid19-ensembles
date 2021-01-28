@@ -128,8 +128,8 @@ plot_wis <- function(df, models, locations, window_sizes, x='window_size',
                      start_date='1900-01-01', end_date='3000-01-01',
                      kind='bar', outlier.shape=NA,
                      ncol=4, dir='v', scales='fixed', angle=0, vjust=0, hjust=0,
-                     title, base_size=12, export=FALSE,
-                     yintercept=17.7734){
+                     title, base_size=10, export=FALSE,
+                     yintercept=NULL){
   x <- ensym(x)
   
   try(facet <- ensym(facet), silent=TRUE) # if NULL: no facetting
@@ -210,11 +210,12 @@ plot_wis <- function(df, models, locations, window_sizes, x='window_size',
                        aes(x=!!x, y=value,
                            fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
              geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
-             geom_hline(yintercept = yintercept, linetype = 'dashed', color="black") +
+             geom_hline(yintercept = yintercept, linetype = 'dashed', color="black", size=0.5) +
              theme_gray(base_size=base_size) +
              theme(axis.text.x=element_text(vjust=vjust, angle=angle, hjust=hjust)) +
-             scale_fill_viridis(discrete=TRUE, name = "Penalty for", 
-                                labels = c("Overprediction", "Dispersion", "Underprediction"))
+             scale_fill_viridis(discrete=TRUE, name = NULL, 
+                                labels = c("Overprediction", "Dispersion", "Underprediction")) +
+             theme(legend.position="right")
          },
          'box' = {
            g <- ggplot(subset(df, score=='wis'), 
