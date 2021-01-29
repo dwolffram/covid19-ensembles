@@ -105,11 +105,17 @@ ggsave('plots/4wk_ahead/4wk_rank_ensembles_byState.png', width=15.5, height=10, 
 df1 <- load_scores("scores/ensemble_scores_1wk_noUS.csv", remove_revisions=TRUE, long_format=TRUE)
 df2 <- load_scores("scores/ensemble_scores_4wk_noUS.csv", remove_revisions=TRUE, long_format=TRUE)
 
+df1 <- load_scores("scores/individual_scores_1wk.csv", remove_revisions=TRUE, long_format=TRUE)
+df2 <- load_scores("scores/individual_scores_4wk.csv", remove_revisions=TRUE, long_format=TRUE)
+
 df <- bind_rows(df1, df2)
 
 df <- subset(df, window_size == 4) %>%
   filter(location != "US" & model != "COVIDhub-baseline") %>%
   select(-window_size)
+
+df <- df %>%
+  filter(location != "US" & model != "COVIDhub-baseline")
 
 df$model <- factor(df$model, levels = c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
                                         'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
@@ -147,3 +153,13 @@ ggplot(subset(df, score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")),
 #coord_flip()
 
 ggsave('plots/1and4wk_wis_ensembles.png', width=15.5, height=7, dpi=500, unit='cm', device='png')
+ggsave('plots/1and4wk_wis_individual.png', width=15.5, height=7, dpi=500, unit='cm', device='png')
+
+
+
+### LOW MEDIUM HIGH MORTALITY
+
+a <- left_join(df, t1, by = "location")
+
+plot_wis(a, locations='states', x=model, facet=mortality, 
+         ncol=3, hjust=0.5, dir='h', title=NULL, scales="fixed")

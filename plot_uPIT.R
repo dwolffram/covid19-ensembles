@@ -69,6 +69,9 @@ upit_histogram <- function(df, ..., facet, breaks, xlab='Probability Integral Tr
 df <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk_noUS.csv", add_baseline = TRUE, 
                      remove_revisions=TRUE, add_truth=TRUE)
 
+df <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk.csv", add_baseline = TRUE, 
+                     remove_revisions=TRUE, add_truth=TRUE)
+
 df <- load_ensembles("data/ensemble_forecasts/df_ensembles_4wk_noUS.csv", add_baseline = TRUE, 
                      remove_revisions=TRUE, add_truth=TRUE)
 
@@ -95,7 +98,7 @@ upit_histogram(subset(df, location != "US" & window_size==4), model, target_end_
 ggsave('plots/1wk_ahead/upit_ensembles_1wk_23.png', width=15.5, height=18, dpi=500, unit='cm', device='png')
 ggsave('plots/4wk_ahead/upit_ensembles_4wk_20.png', width=15.5, height=18, dpi=500, unit='cm', device='png')
 
-upit_histogram(subset(c, location_name=="New York"), target_end_date, location, facet=model, breaks=seq(0, 1, 0.1))
+upit_histogram(subset(c, location_name=="California"), target_end_date, location, facet=model, breaks=seq(0, 1, 0.1))
 
 t <- load_truth()
 t <- t %>%
