@@ -5,7 +5,7 @@ Sys.setlocale("LC_TIME", "C")
 
 df <- load_truth()
 df <- subset(df, weekdays(df$date)=='Saturday')
-df$type = 'latest'
+df$type <- 'revised'
 
 # New Jersey: Rev. Date 2020-06-29
 df2 <- load_truth('2020-06-22')
@@ -47,12 +47,13 @@ compare_truth <- function(df, location_name, as_of){
     filter(location_name== !!(location_name)) %>%
     ggplot(aes(x=date, y=value, color=type)) +
       geom_line() +
-      theme_gray(base_size=18) +
+      geom_point() +
+      theme_gray(base_size=10) +
       labs(title = location_name, 
            x = 'Date',
-           y = 'Cumlative Deaths',
-           color='Truth')#+
-      #geom_vline(xintercept=as.numeric(as.Date(as_of)), linetype=2)
+           y = 'Cumulative Deaths',
+           color='Truth')+
+      geom_vline(xintercept=as.numeric(as.Date(as_of)), linetype=2)
 }
 
 compare_truth(df, 'New York', '2020-06-29')
@@ -84,6 +85,161 @@ df3 <- add_location_names(df3)
 ggplot(subset(df3, location_name=='New Jersey'), aes(x=date, y=value, color=type)) +
   geom_line()
 
+
+
+compare_truth2 <- function(df, location_name, as_of){
+  df2 <- read_csv(paste0("data/jhu_historic_deaths/preprocessed/", as_of, "_time_series_covid19_deaths_US.csv"))
+  df2 <- subset(df2, weekdays(df2$date)=='Saturday')
+  df2$type = paste('as of', as_of)
+  df2 <- df2 %>%
+    select(-location_name)
+  
+  
+  df3 <- rbind(df, df2)
+  df3 <- add_location_names(df3)
+  
+  #start_date <- as.Date(as_of) - 60
+  start_date <- as.Date("2020-03-01")
+  end_date <- as.Date(as_of) + 14
+  
+  df3 %>%
+    filter(location_name== !!(location_name) & date >= start_date & date <= end_date) %>%
+    ggplot(aes(x=date, y=value, color=type)) +
+    geom_line() +
+    geom_point(size=0.4) +
+    theme_gray(base_size=8) +
+    theme(legend.background = element_rect(colour=NA, fill=NA),
+          legend.title=element_blank(),
+          legend.justification = c(0, 1),
+          legend.position=c(0.05, 1)) +
+          # legend.justification = c(1, 0),
+          # legend.position=c(1, 0.05)) +
+    labs(title = location_name, 
+         x = 'Date',
+         y = 'Cumulative Deaths',
+         color='Truth')#+
+    #geom_vline(xintercept=as.numeric(as.Date(as_of)), linetype=2)
+}
+
+
+compare_truth2(df, 'New Jersey', '2020-06-27')
+ggsave('plots/revision/new_jersey_unrevised.png', width=7.5, height=5, dpi=500, unit='cm', device='png')
+compare_truth2(df, 'New Jersey', '2020-07-04')
+ggsave('plots/revision/new_jersey_revised.png', width=7.5, height=5, dpi=500, unit='cm', device='png')
+
+
+compare_truth2(df, 'New York', '2020-06-27')
+ggsave('plots/revision/new_york_unrevised.png', width=7.5, height=5, dpi=500, unit='cm', device='png')
+compare_truth2(df, 'New York', '2020-07-04')
+ggsave('plots/revision/new_york_revised.png', width=7.5, height=5, dpi=500, unit='cm', device='png')
+
+
+compare_truth2(df, 'Texas', '2020-08-01')
+ggsave('plots/revision/texas_unrevised.png', width=7.5, height=5, dpi=500, unit='cm', device='png')
+compare_truth2(df, 'Texas', '2020-08-08')
+ggsave('plots/revision/texas_revised.png', width=7.5, height=5, dpi=500, unit='cm', device='png')
+
+
+compare_truth2(df, 'Michigan', '2020-06-13')
+ggsave('plots/revision/michigan_unrevised.png', width=7.5, height=5, dpi=500, unit='cm', device='png')
+compare_truth2(df, 'Michigan', '2020-06-20')
+ggsave('plots/revision/michigan_revised.png', width=7.5, height=5, dpi=500, unit='cm', device='png')
+
+
+
+### INCIDENCE
+
+df1_inc <- df
+df1_inc$value <- c(0,diff(df1_inc$value))
+df1_inc <- df1_inc[-1,]
+
+df2_inc <- df2
+df2_inc$value <- c(0,diff(df2_inc$value))
+df2_inc <- df2_inc[-1,]
+
+compare_truth3 <- function(df, location_name, as_of){
+  df1_inc <- add_location_names(df)%>%
+    filter(location_name== !!(location_name))
+  df1_inc$value <- c(0,diff(df1_inc$value))
+  df1_inc <- df1_inc[-1,]%>%
+    select(-location_name)
+  
+  df2 <- read_csv(paste0("data/jhu_historic_deaths/preprocessed/", as_of, "_time_series_covid19_deaths_US.csv"))
+  df2 <- subset(df2, weekdays(df2$date)=='Saturday')%>%
+    filter(location_name== !!(location_name))
+  df2$type = paste('as of', as_of)
+  df2 <- df2 %>%
+    select(-location_name)
+  
+  df2_inc <- df2
+  df2_inc$value <- c(0,diff(df2_inc$value))
+  df2_inc <- df2_inc[-1,]
+  
+  
+  df3 <- rbind(df1_inc, df2_inc)
+  df3 <- add_location_names(df3)
+  
+  df3  %>%
+    ggplot(aes(x=date, y=value, color=type)) +
+    geom_line() +
+    geom_point(size=0.4) +
+    theme_gray(base_size=8) +
+    theme(legend.background = element_rect(colour=NA, fill=NA),
+          legend.title=element_blank(),
+          # legend.justification = c(0, 1),
+          # legend.position=c(0.05, 1)) +
+          legend.justification = c(1, 0),
+          legend.position=c(1, 0.05)) +
+    labs(title = location_name, 
+         x = 'Date',
+         y = 'Cumulative Deaths',
+         color='Truth')#+
+  #geom_vline(xintercept=as.numeric(as.Date(as_of)), linetype=2)
+}
+
+
+compare_truth3(df, 'Michigan', '2020-06-13')
+compare_truth3(df, 'Michigan', '2020-06-20')
+
+
+compare_truth3(df, 'Texas', '2020-08-01')
+compare_truth3(df, 'Texas', '2020-08-08')
+
+df1_inc <- add_location_names(df)%>%
+  filter(location_name== "Michigan")
+df1_inc$value <- c(0,diff(df1_inc$value))
+df1_inc <- df1_inc[-1,]
+
+df2 <- read_csv(paste0("data/jhu_historic_deaths/preprocessed/", '2020-06-13', "_time_series_covid19_deaths_US.csv"))
+df2 <- subset(df2, weekdays(df2$date)=='Saturday')%>%
+  filter(location_name== "Michigan")
+df2$type = paste('as of', '2020-06-13')
+df2 <- df2 %>%
+  select(-location_name)
+
+df2_inc <- df2
+df2_inc$value <- c(0,diff(df2_inc$value))
+df2_inc <- df2_inc[-1,]
+
+
+df3 <- rbind(df1_inc, df2)
+df3 <- add_location_names(df3)
+
+df3  %>%
+  ggplot(aes(x=date, y=value, color=type)) +
+  geom_line() +
+  geom_point(size=0.4) +
+  theme_gray(base_size=8) +
+  theme(legend.background = element_rect(colour=NA, fill=NA),
+        legend.title=element_blank(),
+        # legend.justification = c(0, 1),
+        # legend.position=c(0.05, 1)) +
+        legend.justification = c(1, 0),
+        legend.position=c(1, 0.05)) +
+  labs(title = "location_name", 
+       x = 'Date',
+       y = 'Cumulative Deaths',
+       color='Truth')#+
 
 
 compare_truth(df, 'Mississippi', '2020-06-08')
