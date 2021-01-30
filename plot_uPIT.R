@@ -40,17 +40,17 @@ upit_histogram <- function(df, ..., facet, breaks, xlab='Probability Integral Tr
     results <- bind_rows(results, results_m)
   }
   
-  results$model <- factor(results$model)
-  results$model <- recode_factor(results$model, "COVIDhub-baseline"="Baseline")
-  results$model <- fct_relevel(results$model, "Baseline", after = Inf)
-  
-  results$model <- factor(results$model, levels=intersect(c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
-                                                            'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
-                                                            'Baseline'),
-                                                          unique(results$model)))
-  try(results$model <- factor(results$model, labels=c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]",
-                                                  "QRA[2]", "QRA[3]", "QRA[4]", "Baseline")),
-      silent=TRUE)
+  # results$model <- factor(results$model)
+  # results$model <- recode_factor(results$model, "COVIDhub-baseline"="Baseline")
+  # results$model <- fct_relevel(results$model, "Baseline", after = Inf)
+  # 
+  # results$model <- factor(results$model, levels=intersect(c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
+  #                                                           'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
+  #                                                           'Baseline'),
+  #                                                         unique(results$model)))
+  # try(results$model <- factor(results$model, labels=c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]",
+  #                                                 "QRA[2]", "QRA[3]", "QRA[4]", "Baseline")),
+  #     silent=TRUE)
   
   ggplot(results, aes(alpha, upit)) + 
     geom_rect(aes(xmin = alpha, xmax = lead(alpha), ymin = 0, ymax = lead(upit)), 
@@ -154,7 +154,7 @@ df$model <- recode_factor(df$model, "COVIDhub-baseline"="Baseline")
 df$model <- fct_relevel(df$model, "Baseline", after = Inf)
 levels(df$model)
 
-df <- add_truth(df)
+#df <- add_truth(df)
 
 upit_histogram(subset(df, location != "US"), model, target_end_date, location, facet=model, scales="free_y", base_size=12)
 upit_histogram(subset(df, location != "US"), model, target_end_date, location, facet=model, scales="free_y",
@@ -171,6 +171,147 @@ upit_histogram(subset(df, location != "US" & model == "UCLA-SuEIR"), model, targ
                facet=model, scales="free_y", base_size=10)
 
 
+c <- subset(df, location != "US" & model == "UCLA-SuEIR")
+c <- left_join(c, t1, by = "location")
+
+# upit_histogram(subset(c, location != "US" & model == "UCLA-SuEIR"), model, target_end_date, mortality, location, 
+#                facet=mortality, scales="free_y", base_size=10)
+
+
+mortality <- unique(c$mortality)
+
+results <- data.frame()
+for (m in mortality){
+  print(m)
+  temp <- subset(c, mortality==m) %>%
+    group_by(model, target_end_date, location) %>%
+    summarize(bin = get_bin(truth, value, quantile))
+  
+  temp <- t(sapply(temp$bin, FUN=get_bounds))
+  temp <- data.frame(temp)
+  temp$val <- 1/(nrow(temp)*(temp$X2 - temp$X1))
+  
+  results_m <- data.frame(alpha=c(unique(c$quantile), 1))
+  results_m$upit <- sapply(results_m$alpha, FUN=get_upit, temp=temp)
+  results_m <- bind_rows(results_m, data.frame(alpha=0, upit=0))
+  results_m <- arrange(results_m, alpha)
+  results_m$mortality <- m
+  results <- bind_rows(results, results_m)
+}
+
+#     silent=TRUE)
+
+ggplot(results, aes(alpha, upit)) + 
+  geom_rect(aes(xmin = alpha, xmax = lead(alpha), ymin = 0, ymax = lead(upit)), 
+            color="black", fill = "black", alpha = 0.3)+
+  facet_wrap(mortality, ncol=3, scales="free", labeller=label_parsed) +
+  scale_x_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
+                     labels = function(x) ifelse(x == 0, "0", x)) +
+  scale_y_continuous(labels = function(y) ifelse(y == 0, "0", y)) +
+  #scale_y_continuous(breaks = f(0.5), labels = function(y) ifelse(y == 0, "0", y)) +
+  #ylim(0, 1.75) +
+  labs(x="uPIT", y="Density") +
+  geom_segment(aes(x=0,xend=1,y=1,yend=1), linetype="dashed", color="black") +
+  theme_gray(base_size=10)
+
+
+upit_by_mortality <- function(df, model){
+  c <- subset(df, location != "US" & model == model)
+  c <- left_join(c, t1, by = "location")
+  
+  # upit_histogram(subset(c, location != "US" & model == "UCLA-SuEIR"), model, target_end_date, mortality, location, 
+  #                facet=mortality, scales="free_y", base_size=10)
+  
+  
+  mortality <- unique(c$mortality)
+  
+  results <- data.frame()
+  for (m in mortality){
+    print(m)
+    temp <- subset(c, mortality==m) %>%
+      group_by(model, target_end_date, location) %>%
+      summarize(bin = get_bin(truth, value, quantile))
+    
+    temp <- t(sapply(temp$bin, FUN=get_bounds))
+    temp <- data.frame(temp)
+    temp$val <- 1/(nrow(temp)*(temp$X2 - temp$X1))
+    
+    results_m <- data.frame(alpha=c(unique(c$quantile), 1))
+    results_m$upit <- sapply(results_m$alpha, FUN=get_upit, temp=temp)
+    results_m <- bind_rows(results_m, data.frame(alpha=0, upit=0))
+    results_m <- arrange(results_m, alpha)
+    results_m$mortality <- m
+    results <- bind_rows(results, results_m)
+  }
+  
+  #     silent=TRUE)
+  
+  ggplot(results, aes(alpha, upit)) + 
+    geom_rect(aes(xmin = alpha, xmax = lead(alpha), ymin = 0, ymax = lead(upit)), 
+              color="black", fill = "black", alpha = 0.3)+
+    facet_wrap(mortality, ncol=3, scales="free", labeller=label_parsed) +
+    scale_x_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
+                       labels = function(x) ifelse(x == 0, "0", x)) +
+    scale_y_continuous(labels = function(y) ifelse(y == 0, "0", y)) +
+    #scale_y_continuous(breaks = f(0.5), labels = function(y) ifelse(y == 0, "0", y)) +
+    #ylim(0, 1.75) +
+    labs(x="uPIT", y="Density") +
+    geom_segment(aes(x=0,xend=1,y=1,yend=1), linetype="dashed", color="black") +
+    theme_gray(base_size=10)
+}
+
+upit_by_mortality(df, "UCLA-SuEIR")
+upit_by_mortality(df, "YYG-ParamSearch")
+
+
+c <- subset(df, location != "US" & model == "UCLA-SuEIR")
+c <- subset(df, location != "US" & model == "YYG-ParamSearch")
+
+c <- left_join(c, t1, by = "location")
+
+# upit_histogram(subset(c, location != "US" & model == "UCLA-SuEIR"), model, target_end_date, mortality, location, 
+#                facet=mortality, scales="free_y", base_size=10)
+
+
+c <- subset(df, location != "US" & model == "YYG-ParamSearch")
+upit_histogram(subset(c, location == "34" & model == "YYG-ParamSearch"), model, target_end_date, location,
+               facet=model, scales="free_y", base_size=10)
+
+mortality <- unique(c$location)
+
+results <- data.frame()
+for (m in mortality){
+  print(m)
+  temp <- subset(c, location==m) %>%
+    group_by(model, target_end_date, location) %>%
+    summarize(bin = get_bin(truth, value, quantile))
+  
+  temp <- t(sapply(temp$bin, FUN=get_bounds))
+  temp <- data.frame(temp)
+  temp$val <- 1/(nrow(temp)*(temp$X2 - temp$X1))
+  
+  results_m <- data.frame(alpha=c(unique(c$quantile), 1))
+  results_m$upit <- sapply(results_m$alpha, FUN=get_upit, temp=temp)
+  results_m <- bind_rows(results_m, data.frame(alpha=0, upit=0))
+  results_m <- arrange(results_m, alpha)
+  results_m$mortality <- m
+  results <- bind_rows(results, results_m)
+}
+
+#     silent=TRUE)
+
+ggplot(subset(results, mortality == "01"), aes(alpha, upit)) + 
+  geom_rect(aes(xmin = alpha, xmax = lead(alpha), ymin = 0, ymax = lead(upit)), 
+            color="black", fill = "black", alpha = 0.3)+
+  facet_wrap(mortality, scales="free", labeller=label_parsed, ncol=3) +
+  scale_x_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
+                     labels = function(x) ifelse(x == 0, "0", x)) +
+  scale_y_continuous(labels = function(y) ifelse(y == 0, "0", y)) +
+  #scale_y_continuous(breaks = f(0.5), labels = function(y) ifelse(y == 0, "0", y)) +
+  #ylim(0, 1.75) +
+  labs(x="uPIT", y="Density") +
+  geom_segment(aes(x=0,xend=1,y=1,yend=1), linetype="dashed", color="black") +
+  theme_gray(base_size=10)
 
 # temp <- subset(df, location != "US" & model == "UCLA-SuEIR") %>%
 #   group_by(target_end_date, location) %>%

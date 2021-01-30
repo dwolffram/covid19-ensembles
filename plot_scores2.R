@@ -114,14 +114,21 @@ df <- subset(df, window_size == 4) %>%
   filter(location != "US" & model != "COVIDhub-baseline") %>%
   select(-window_size)
 
+df <- subset(df, window_size == 4) %>%
+  filter(location != "US") %>%
+  select(-window_size)
+
 df <- df %>%
-  filter(location != "US" & model != "COVIDhub-baseline")
+  filter(location != "US")
+
+#df[df$model == "COVIDhub-baseline", ]$model <- "Baseline"
+
 
 df$model <- factor(df$model, levels = c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
                                         'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
                                         "CovidAnalytics-DELPHI", "CU-select", "JHU_IDD-CovidSP", 
                                         "LANL-GrowthRate", "MOBS-GLEAM_COVID", "PSI-DRAFT", "UCLA-SuEIR", 
-                                        "UMass-MechBayes", "YYG-ParamSearch", 'Baseline'),
+                                        "UMass-MechBayes", "YYG-ParamSearch", 'COVIDhub-baseline'),
                    labels = c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", 
                               "GQRA[2]", "GQRA[3]", "GQRA[4]", "QRA[2]", "QRA[3]", "QRA[4]", 
                               "DELPHI", "CU", "JHU_IDD", 
@@ -157,9 +164,48 @@ ggsave('plots/1and4wk_wis_individual.png', width=15.5, height=7, dpi=500, unit='
 
 
 
+df <- left_join(df, t1, by = "location")
+
+
+df_rank <- df %>%
+  filter(score == "wis") %>%
+  group_by(target, mortality, target_end_date, model) %>%
+  summarize(meanWIS = mean(value)) %>%
+  group_by(target, mortality, target_end_date) %>%
+  arrange(model, meanWIS) %>% 
+  mutate(rank=rank(meanWIS)) %>%
+  arrange(target_end_date)
+
+df_rank <- df_rank %>%
+  group_by(target, mortality, model) %>%
+  mutate(meanRank=mean(rank))
+
+ggplot(subset(df_rank, target=="1 wk ahead cum death"), aes(x=reorder_within(model, meanRank, mortality), fill="#D55E00", y=rank)) + 
+  geom_boxplot(alpha=0.5, outlier.size = 0.6) +
+  scale_x_reordered(NULL)+
+  facet_wrap('mortality', scales="free") +
+  #scale_fill_manual(values=c("#009E73", "#D55E00")) +
+  stat_summary(fun=mean, geom="point", shape=3, size=2) +
+  #xlab("Model") +
+  ylab("Rank") +
+  scale_y_continuous(breaks=c(2, 4, 6, 8, 10)) +
+  #scale_x_discrete(NULL, labels = parse(text = levels(reorder(df_rank$model, df_rank$meanRank))))+
+  theme_gray(base_size=10) +
+  theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1), 
+        legend.position="none")
+  
+ggsave('plots/1and4wk_rank_individual.png', width=15.5, height=7, dpi=500, unit='cm', device='png')
+
+
+
+
+
 ### LOW MEDIUM HIGH MORTALITY
 
 a <- left_join(df, t1, by = "location")
 
 plot_wis(a, locations='states', x=model, facet=mortality, 
+         ncol=3, hjust=0.5, dir='h', title=NULL, scales="fixed")
+
+plot_wis(df, locations='states', x=model, facet=mortality, 
          ncol=3, hjust=0.5, dir='h', title=NULL, scales="fixed")
