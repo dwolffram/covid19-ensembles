@@ -57,7 +57,7 @@ get_available_models <- function(df, target="1 wk ahead cum death", exclude_gaps
 
 
 plot_availability <- function(df, target="1 wk ahead cum death", exclude_gaps=FALSE, 
-                              min_no_locations=50, drop_incomplete=FALSE){
+                              min_no_locations=50, drop_incomplete=FALSE, title){
   
   temp <- get_available_models(df, target=target, exclude_gaps=exclude_gaps, 
                                    min_no_locations=min_no_locations, drop_incomplete=drop_incomplete)
@@ -70,21 +70,25 @@ plot_availability <- function(df, target="1 wk ahead cum death", exclude_gaps=FA
   temp$model <-  factor(temp$model, levels = unique(temp$model[order(temp$count)]))
   temp$forecast_missing <-  factor(temp$forecast_missing, levels = c(0, 1, -1))
   
+  if(missing(title)){
+    title= paste0("Forecast Availability (", target, ")")
+  }
+  
   plot(ggplot(temp, aes(target_end_date, model, fill= factor(forecast_missing))) + 
       geom_tile(colour = "grey50") +
       scale_fill_manual(values=c("1"="red", "0"="darkgreen", "-1"="orange"), 
                         name = element_blank(), labels = c("Available", "Missing", "< 50 Locations")) +
       scale_x_date(breaks = seq(min(temp$target_end_date), max(temp$target_end_date), by="week")[c(FALSE, TRUE)]) +
-      labs(x="Target End Date", y="Model", title= paste0("Forecast Availability (", target, ")")))+
-      theme_gray(base_size=8) +
+      labs(x="Target End Date", y="Model", title=title))+
+      theme_gray(base_size=10) +
       theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
       
 }
 
-plot_availability(df, target = "1 wk ahead cum death")
+plot_availability(df, target = "1 wk ahead cum death", title=NULL)
 plot_availability(df, target = "1 wk ahead cum death", exclude_gaps = TRUE)
 plot_availability(df, target = "1 wk ahead cum death", drop_incomplete = TRUE)
-plot_availability(df, target = "1 wk ahead cum death", drop_incomplete = TRUE, exclude_gaps = TRUE)
+plot_availability(df, target = "1 wk ahead cum death", drop_incomplete = TRUE, exclude_gaps = TRUE, title=NULL)
 
 plot_availability(df, target="4 wk ahead cum death")
 plot_availability(df, target="4 wk ahead cum death", drop_incomplete = TRUE, exclude_gaps = TRUE)
@@ -93,7 +97,9 @@ plot_availability(df, target = "1 wk ahead inc death")
 plot_availability(df, target = "1 wk ahead inc death", exclude_gaps = TRUE)
 plot_availability(df, target = "1 wk ahead inc death", drop_incomplete = TRUE, exclude_gaps = TRUE)
 
-ggsave('plots/model_availability2.png', width=16, height=20, dpi=800, unit='cm', device='png')
+ggsave('plots/model_availability.png', width=15.5, height=19, dpi=500, unit='cm', device='png')
+ggsave('plots/model_availability_filtered.png', width=15.5, height=12, dpi=500, unit='cm', device='png')
+
 
 
 a <- df %>%

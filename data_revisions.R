@@ -146,6 +146,9 @@ compare_truth2(df, 'Michigan', '2020-06-20')
 ggsave('plots/revision/michigan_revised.png', width=7.5, height=5, dpi=500, unit='cm', device='png')
 
 
+compare_truth2(df, 'California', '2020-10-25')
+
+
 
 ### INCIDENCE
 

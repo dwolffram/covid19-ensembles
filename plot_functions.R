@@ -1,6 +1,6 @@
 library(ggplot2)
 library(viridis)
-library(scales)
+#library(scales)
 
 ### PLOT FORECASTS
 
@@ -90,32 +90,35 @@ plot_forecast <- function(df, models, locations, window_sizes,
     title = paste(horizon, "wk ahead forecasts with 50% and 90% prediction intervals")
   }
   
-
-  df$model <- factor(df$model, levels=c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
-                                        'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
-                                        'Baseline'),
-                     labels=c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]",
-                              "QRA[2]", "QRA[3]", "QRA[4]", "Baseline"))
+# 
+#   df$model <- factor(df$model, levels=c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
+#                                         'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
+#                                         'Baseline'),
+#                      labels=c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]",
+#                               "QRA[2]", "QRA[3]", "QRA[4]", "Baseline"))
   df$location_name <- str_replace(df$location_name, " ", "~")
   
   
   ggplot(df, aes(x=target_end_date, y=truth)) +
     {if(!missing(facet)) facet_wrap(facet, ncol=ncol, dir=dir, scales=scales)} +
-    {if(missing(facet)) facet_grid(rows=enquos(facet_row), cols=enquos(facet_col), scales=scales, labeller=label_parsed)} +
+    # {if(missing(facet)) facet_grid(rows=enquos(facet_row), cols=enquos(facet_col), scales=scales, labeller=label_parsed)} +
+    #{if(missing(facet)) facet_wrap(model ~ location_name, ncol=ncol, scales=scales, labeller=label_parsed)} +
+    {if(missing(facet)) facet_grid(location_name~model, scales=scales, labeller=label_parsed)} +
     geom_smooth(aes(y = value.0.5, ymin = value.0.05, ymax = value.0.95), 
                 linetype=3, size=0.2, colour="white", fill=cols[2], alpha=1, stat = "identity") +
     geom_smooth(aes(y = value.0.5, ymin = value.0.25, ymax = value.0.75),
                 linetype=3, size=0.2, colour="white", fill=cols[1], alpha=1, stat = "identity") +
     geom_line() +
-    geom_point(pch = 4) +
-    geom_point(aes(y = value.0.5), pch = 21, col = "black", bg = "white") +
+    geom_point(pch = 4, size=0.7) +
+    geom_point(aes(y = value.0.5), pch = 21, col = "black", bg = "white", size=0.7) +
     theme_bw() +
-    scale_x_date(date_breaks="1 months", date_labels = "%B") +
-    #theme(axis.text.x=element_text(angle=45,hjust=1)) +
+    #scale_x_date(date_breaks="1 months", date_labels = "%B") +
     labs(title=title,
          x = "Date",
          y = ylab) +
-    theme_grey(base_size=base_size)#+
+    theme_grey(base_size=base_size) +
+    theme(axis.text.x=element_text(angle=90,hjust=1, vjust=0.5))
+    #+
   # theme(plot.title= element_text(size=9),
   #       axis.text = element_text(size = 5)) 
 }
@@ -203,6 +206,8 @@ plot_wis <- function(df, models, locations, window_sizes, x='window_size',
   try(df$model <- factor(df$model, labels=c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]",
                                                       "QRA[2]", "QRA[3]", "QRA[4]", "Baseline")),
       silent=TRUE)
+  
+  df$location_name <- str_replace(df$location_name, " ", "~")
 
   switch(kind,
          'bar' = {

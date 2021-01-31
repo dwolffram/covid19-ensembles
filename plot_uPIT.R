@@ -274,7 +274,7 @@ c <- left_join(c, t1, by = "location")
 
 
 c <- subset(df, location != "US" & model == "YYG-ParamSearch")
-upit_histogram(subset(c, location == "34" & model == "YYG-ParamSearch"), model, target_end_date, location,
+upit_histogram(subset(c, location == "19" & model == "YYG-ParamSearch"), model, target_end_date, location,
                facet=model, scales="free_y", base_size=10)
 
 mortality <- unique(c$location)

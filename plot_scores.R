@@ -65,6 +65,10 @@ plot_wis(df, locations='national', x=model, facet=window_size,
 ## window size 4
 
 plot_wis(df, locations='states', window_sizes=4, x=model, facet=NULL, angle=90, vjust=0.5)
+
+plot_wis(subset(df, location_name != "California"), locations='states', window_sizes=4, x=model, facet=NULL, angle=90, vjust=0.5)
+
+
 plot_wis(df, locations='national', window_sizes=4, x=model, facet=NULL, angle=90, vjust=0.5)
 
 # plot_wis(df, kind='box', locations='states', window_sizes=4, x=model, facet=NULL)
@@ -77,6 +81,9 @@ plot_wis(df, locations='states', window_sizes=4, x=model, facet=location_name,
 
 plot_wis(df, locations='states', window_sizes=4, x=model, facet=location_name,
          ncol=8, angle=90, vjust=0.5, scales='free_y')
+
+plot_wis(df, locations='states', window_sizes=4, x=location_name, facet=model,
+         ncol=2, angle=90, vjust=0.5, scales='free_y')
 
 # plot_wis(df, window_sizes=4, x=model, facet=location_name,
 #          ncol=8, angle=90, vjust=0.5)
@@ -176,6 +183,24 @@ ggsave('plots/1wk_ahead/1wk_wis_all.png', width=15.5, height=9, dpi=500, unit='c
 ggsave('plots/4wk_ahead/4wk_wis_all.png', width=15.5, height=9, dpi=500, unit='cm', device='png')
 
 
+
+
+ggplot(subset(df, score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u") & location %in% locs), 
+       aes(x=reorder(model, value), y=value,
+           fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  facet_wrap("location_name", ncol=2, scales="free") +
+  geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
+  theme_gray(base_size=10) +
+  theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1), 
+        legend.position = c(0.9, 0), 
+        legend.justification = c(1, 0)) +
+  scale_fill_viridis(discrete=TRUE, name = NULL,
+                     labels = c("Overprediction", "Dispersion", "Underprediction"))+
+  scale_x_discrete(labels = function(l) parse(text=l)) + 
+  labs(x = NULL,
+       y = "Mean WIS")# +
+
+ggsave('plots/examples_wis.png', width=15.5, height=15, dpi=500, unit='cm', device='png')
 
 
 df_rank <- df %>%

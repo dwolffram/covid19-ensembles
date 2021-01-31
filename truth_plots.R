@@ -120,10 +120,13 @@ ggplot(df_all, aes(x=date, y=value)) +
   geom_rect(data = anno, aes(xmin = test_start, xmax = test_end, ymin = y1, ymax = y2), 
             alpha = 0.3, fill="green", inherit.aes = FALSE)+
   geom_line() + 
-  geom_point(pch = 21, col = "black", bg = "white") +
+  geom_point(pch = 21, size=0.8, col = "black", bg = "white") +
   facet_wrap("target", scales="free_y") +
   labs(title=NULL,
        x = "Date",
-       y = "Weekly Deaths") +
+       y = "Deaths") +
   theme_grey(base_size=10)#+
+
+
+ggsave('plots/evaluation_periods.png', width=15.5, height=9, dpi=500, unit='cm', device='png')
 
