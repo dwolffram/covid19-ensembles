@@ -199,13 +199,13 @@ plot_wis <- function(df, models, locations, window_sizes, x='window_size',
     print(filename)
   }
   
-  df$model <- factor(df$model, levels=intersect(c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
-                                                            'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
-                                                            'Baseline'),
-                                                          unique(df$model)))
-  try(df$model <- factor(df$model, labels=c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]",
-                                                      "QRA[2]", "QRA[3]", "QRA[4]", "Baseline")),
-      silent=TRUE)
+  # df$model <- factor(df$model, levels=intersect(c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
+  #                                                           'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
+  #                                                           'Baseline'),
+  #                                                         unique(df$model)))
+  # try(df$model <- factor(df$model, labels=c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]",
+  #                                                     "QRA[2]", "QRA[3]", "QRA[4]", "Baseline")),
+  #     silent=TRUE)
   
   df$location_name <- str_replace(df$location_name, " ", "~")
 
@@ -253,7 +253,7 @@ plot_wis <- function(df, models, locations, window_sizes, x='window_size',
 }
 
 
-plot_state_contribution <- function(df, n_highest=5, title="Relative Contribution to WIS "){
+plot_state_contribution <- function(df, n_highest=5, title="Relative Contribution to WIS ", base_size=10){
   df <- df %>%
     filter(location!='US', score=='wis') %>%
     group_by(model, location) %>%
@@ -280,6 +280,6 @@ plot_state_contribution <- function(df, n_highest=5, title="Relative Contributio
     scale_fill_viridis(discrete=TRUE, name = "State") +
     labs(title = title, x = "Model", y = "Percentage of WIS")+
     scale_x_discrete("Model", labels = parse(text = levels(df$model))) +
-    theme_gray(base_size=12)+
+    theme_gray(base_size=base_size)+
     theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1))
 }

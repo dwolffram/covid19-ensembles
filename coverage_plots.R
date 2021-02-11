@@ -148,3 +148,77 @@ df_temp$u <- df_temp$truth <= floor(df_temp$value)
 df_temp <- df_temp %>%
   group_by(mu, quantile) %>%
   summarize(mu=first(mu), l = mean(l), u=mean(u))
+
+
+
+### COVID-19 Forecasts
+
+df <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk_noUS.csv", add_baseline = TRUE, 
+                     remove_revisions=TRUE, add_truth=TRUE)
+
+plot_coverage <- function(df, width=0.05, breaks){
+  if(!missing(breaks)){
+    df <- subset(df, quantile %in% round(breaks, 3))
+  }
+  
+  df$model <- factor(df$model, levels = c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
+                                          'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
+                                          "CovidAnalytics-DELPHI", "CU-select", "JHU_IDD-CovidSP", 
+                                          "LANL-GrowthRate", "MOBS-GLEAM_COVID", "PSI-DRAFT", "UCLA-SuEIR", 
+                                          "UMass-MechBayes", "YYG-ParamSearch", "Baseline"),
+                     labels = c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", 
+                                "GQRA[2]", "GQRA[3]", "GQRA[4]", "QRA[2]", "QRA[3]", "QRA[4]", 
+                                "DELPHI", "CU", "JHU_IDD", 
+                                "LANL", "MOBS", "PSI", "UCLA", 
+                                "UMass", "YYG", 'Baseline'))
+  df_temp <- df
+  df_temp$l <- df_temp$truth < floor(df_temp$value)
+  df_temp$u <- df_temp$truth <= floor(df_temp$value)
+  
+  df_temp <- df_temp %>%
+    group_by(model, quantile) %>%
+    summarize(l = mean(l), u=mean(u))
+  
+  ggplot(df_temp) +
+    facet_wrap('model', ncol=3, labeller = label_parsed) +
+    geom_segment(aes(x=0,xend=1,y=0,yend=1), linetype="dashed", colour="grey70")+
+    geom_errorbar(aes(x=quantile, ymin=l, ymax=u), width=width, size=0.5,
+                  data=df_temp, colour="black") +
+    scale_x_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
+                       labels = function(x) ifelse(x == 0, "0", x)) +
+    scale_y_continuous(labels = function(y) ifelse(y == 0, "0", y)) +
+    xlab('Quantile') +
+    ylab('')
+}
+
+plot_coverage(subset(df, location!='US' & window_size==4), breaks=seq(0, 1, 0.1))
+
+plot_coverage(subset(df, location!='US' & window_size==4), width=0.02)
+
+ggsave('plots/coverage_ensembles_23.png', width=20, height=24, dpi=500, unit='cm', device='png')
+
+
+
+
+
+df <- load_forecasts(models = c("CovidAnalytics-DELPHI", "COVIDhub-baseline", "CU-select", 
+                                "JHU_IDD-CovidSP", "LANL-GrowthRate", "MOBS-GLEAM_COVID", 
+                                "PSI-DRAFT", "UCLA-SuEIR", "UMass-MechBayes", "YYG-ParamSearch"),
+                     targets = "1 wk ahead cum death",
+                     exclude_locations = c("11", "60", "66", "69", "72", "74", "78"), 
+                     start_date = "2020-06-20", 
+                     end_date = "2020-10-10",
+                     add_truth = TRUE) %>% 
+  select(-c(forecast_date, type)) %>%
+  select(target_end_date, everything())
+
+plot_coverage(subset(df, location!='US'), breaks=seq(0, 1, 0.1))
+
+plot_coverage(subset(df, location!='US'), width=0.02)
+
+
+ggsave('plots/coverage_individual_23.png', width=20, height=24, dpi=500, unit='cm', device='png')
+
+
+
+
