@@ -7,8 +7,22 @@ Sys.setlocale("LC_ALL", "C")
 
 
 df <- load_truth()
+df <- add_location_names(df)
 
 df <- subset(df, weekdays(df$date)=='Saturday')
+
+ggplot(subset(df, location_name %in% c("Alaska", "California", "Georgia", 
+                                   "Iowa", "Mississippi", "Missouri",
+                                   "New Hampshire", "New York", "Vermont")),
+       aes(x=date, y=value)) +
+  geom_line() +
+  theme_gray(base_size=10) +
+  facet_wrap("location_name", scales="free_y") +
+  xlab("Date") +
+  ylab("Cumulative Deaths")
+
+ggsave('plots/truth_by_state_example.png', width=14, height=9, dpi=500, unit='cm', device='png')
+
 
 df <- df %>%
   filter(location == "US" & date >= "2020-02-22")
