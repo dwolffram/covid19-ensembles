@@ -52,7 +52,12 @@ df$model <- factor(df$model, levels = c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
 
 # toString(shQuote(unique(df2$model), type = "cmd"))
 
-ggplot(subset(df, score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
+ggplot(subset(df, score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u") &
+                model %in% c("EWA", "MED", 
+                           "QRA[2]",
+                           "DELPHI", "CU", "JHU_IDD", 
+                           "LANL", "MOBS", "PSI", "UCLA", 
+                           "UMass", "YYG", 'Baseline')), 
             aes(x=reorder(model, value), y=value,
                 fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
   geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
@@ -65,6 +70,9 @@ ggplot(subset(df, score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")),
   labs(x = NULL,
        y = "Mean WIS")# +
   #coord_flip()
+
+ggsave('plots/poster_wis.png', width=11, height=7, dpi=500, unit='cm', device='png')
+
 
 ggsave('plots/1wk_ahead/1wk_wis_ensembles.png', width=10, height=7, dpi=500, unit='cm', device='png')
 ggsave('plots/4wk_ahead/4wk_wis_ensembles.png', width=15.5, height=9, dpi=500, unit='cm', device='png')

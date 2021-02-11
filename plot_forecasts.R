@@ -141,6 +141,25 @@ m <- levels(df$model)
 locs <- c("06", "29", "28", "12", "19")
 
 
+plot_forecast(subset(df, window_size==4), locations=c("06"), models=c("EWA", "MED", "QRA[2]"), 
+              scales="free_y", incidence=TRUE, ncol=5, base_size = 10, 
+              title=NULL)
+
+a <- subset(df, location != "US" & window_size==4 & model %in% c("EWA", "MED", "QRA[2]"))
+View(subset(a, model=="QRA[2]"))
+
+
+upit_histogram(subset(df, location != "US" & window_size==4 & model %in% c("EWA", "MED", "QRA[2]")), model, target_end_date, location, 
+               facet=model, scales="fixed",
+               breaks=seq(0, 1, 0.1), base_size=10) + ylim(0, 2)
+
+ggsave('plots/poster_ensemble_upit.png', width=11, height=5, dpi=500, unit='cm', device='png')
+
+
+ggsave('plots/ensemble_incidence1.png', width=11, height=6, dpi=600, unit='cm', device='png')
+
+
+
 plot_forecast(subset(df, window_size==4), locations=locs, models=m[1:6], scales="free_y", incidence=TRUE, ncol=5, base_size = 10, 
               title=NULL)
 ggsave('plots/ensemble_incidence1.png', width=15.7, height=19, dpi=600, unit='cm', device='png')

@@ -1,5 +1,5 @@
-setwd("/home/wolffram/covid19-ensembles")
-# setwd("D:/Dokumente/Workspace2/covid19-ensembles")
+# setwd("/home/wolffram/covid19-ensembles")
+setwd("D:/Dokumente/Workspace2/covid19-ensembles")
 
 library(ggplot2)
 library(tidyverse)
