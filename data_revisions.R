@@ -110,10 +110,10 @@ compare_truth2 <- function(df, location_name, as_of){
     theme_gray(base_size=8) +
     theme(legend.background = element_rect(colour=NA, fill=NA),
           legend.title=element_blank(),
-          legend.justification = c(0, 1),
-          legend.position=c(0.05, 1)) +
-          # legend.justification = c(1, 0),
-          # legend.position=c(1, 0.05)) +
+          # legend.justification = c(0, 1),
+          # legend.position=c(0.05, 1)) +
+          legend.justification = c(1, 0),
+          legend.position=c(1, 0.05)) +
     labs(title = location_name, 
          x = 'Date',
          y = 'Cumulative Deaths',
@@ -141,6 +141,7 @@ ggsave('plots/revision/texas_revised.png', width=7.5, height=5, dpi=500, unit='c
 
 
 compare_truth2(df, 'Michigan', '2020-06-13')
+compare_truth2(df, 'Michigan', '2020-06-06')
 ggsave('plots/revision/michigan_unrevised.png', width=7.5, height=5, dpi=500, unit='cm', device='png')
 compare_truth2(df, 'Michigan', '2020-06-20')
 ggsave('plots/revision/michigan_revised.png', width=7.5, height=5, dpi=500, unit='cm', device='png')

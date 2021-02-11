@@ -44,14 +44,14 @@ upit_histogram <- function(df, ..., facet, breaks, xlab='Probability Integral Tr
   results$model <- recode_factor(results$model, "COVIDhub-baseline"="Baseline")
   results$model <- fct_relevel(results$model, "Baseline", after = Inf)
 
-  # results$model <- factor(results$model, levels=intersect(c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
-  #                                                           'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
-  #                                                           'Baseline'),
-  #                                                         unique(results$model)))
-  # try(results$model <- factor(results$model, labels=c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]",
-  #                                                 "QRA[2]", "QRA[3]", "QRA[4]", "Baseline")),
-  #     silent=TRUE)
-  
+  results$model <- factor(results$model, levels=intersect(c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
+                                                            'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
+                                                            'Baseline'),
+                                                          unique(results$model)))
+  try(results$model <- factor(results$model, labels=c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]",
+                                                  "QRA[2]", "QRA[3]", "QRA[4]", "Baseline")),
+      silent=TRUE)
+
   ggplot(results, aes(alpha, upit)) + 
     geom_rect(aes(xmin = alpha, xmax = lead(alpha), ymin = 0, ymax = lead(upit)), 
               color="black", fill = "black", alpha = 0.3)+

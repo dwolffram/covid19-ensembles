@@ -132,9 +132,13 @@ df <- load_scores("scores/individual_scores_1wk.csv", long_format=TRUE)
 df$model <- factor(df$model)
 plot_state_contribution(df, 3, title=NULL)
 
-ggsave('plots/revisions_percentage.png', width=14, height=8, dpi=500, unit='cm', device='png')
+#ggsave('plots/revisions_percentage.png', width=14, height=8, dpi=500, unit='cm', device='png')
+
 plot_wis(df, locations='states', x=model, facet=NULL, angle=90, vjust=0.5, hjust=1, title=NULL)
 
+
+plot_wis(df, locations='states', window_sizes=4, x=model, facet=target_end_date,
+         ncol=3, dir='h', angle=90, vjust=0.5, scales="free_y", title=NULL)
 
 ### COMBINED
 
@@ -200,7 +204,70 @@ ggplot(subset(df, score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u") & location %i
   labs(x = NULL,
        y = "Mean WIS")# +
 
-ggsave('plots/examples_wis.png', width=15.5, height=15, dpi=500, unit='cm', device='png')
+ggsave('plots/examples_wis.png', width=15.5, height=12, dpi=500, unit='cm', device='png')
+
+
+
+ggplot(subset(df, score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
+       aes(x=reorder(model, value), y=value,
+           fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  facet_wrap("target_end_date", ncol=2, scales="free_y") +
+  geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
+  theme_gray(base_size=10) +
+  theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1), 
+        legend.position = c(0.9, 0), 
+        legend.justification = c(1, 0)) +
+  scale_fill_viridis(discrete=TRUE, name = NULL,
+                     labels = c("Overprediction", "Dispersion", "Underprediction"))+
+  scale_x_discrete(labels = function(l) parse(text=l)) + 
+  labs(x = NULL,
+       y = "Mean WIS")
+
+
+### US vs noUS
+
+df1 <- load_scores("scores/ensemble_scores_1wk_noUS.csv", remove_revisions=TRUE, long_format=TRUE)
+df2 <- load_scores("scores/ensemble_scores_1wk.csv", remove_revisions=TRUE, long_format=TRUE)
+
+df1$type <- "States"
+df2$type <- "US"
+
+df <- bind_rows(subset(df1, window_size == 4), df2) %>%
+  filter(location != "US" & model != "COVIDhub-baseline") %>%
+  select(-window_size)
+
+df$model <- factor(df$model, levels = c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
+                                        'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
+                                        "CovidAnalytics-DELPHI", "CU-select", "JHU_IDD-CovidSP", 
+                                        "LANL-GrowthRate", "MOBS-GLEAM_COVID", "PSI-DRAFT", "UCLA-SuEIR", 
+                                        "UMass-MechBayes", "YYG-ParamSearch", 'Baseline'),
+                   labels = c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", 
+                              "GQRA[2]", "GQRA[3]", "GQRA[4]", "QRA[2]", "QRA[3]", "QRA[4]", 
+                              "DELPHI", "CU", "JHU_IDD", 
+                              "LANL", "MOBS", "PSI", "UCLA", 
+                              "UMass", "YYG", 'Baseline')) 
+
+# toString(shQuote(unique(df2$model), type = "cmd"))
+
+ggplot(subset(df, score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u") & model %in% c("V[2]", "V[3]", "V[4]", 
+                                                                               "GQRA[2]", "GQRA[3]", "GQRA[4]", 
+                                                                               "QRA[2]", "QRA[3]", "QRA[4]", "Baseline")), 
+       aes(x=type, y=value,
+           fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
+  facet_wrap("model", labeller=label_parsed, ncol=5) + 
+  theme_gray(base_size=10) +
+  theme(axis.text.x=element_text(vjust=0.5, angle=0, hjust=0.5), 
+        legend.position = "right") +
+  scale_fill_viridis(discrete=TRUE, name = NULL,
+                     labels = c("Overprediction", "Dispersion", "Underprediction"))+
+  scale_x_discrete(labels = function(l) parse(text=l)) + 
+  labs(x = NULL,
+       y = "Mean WIS")# +
+#coord_flip()
+
+ggsave('plots/us_in_training.png', width=15.5, height=6, dpi=500, unit='cm', device='png')
+
 
 
 df_rank <- df %>%
