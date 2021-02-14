@@ -39,7 +39,7 @@ upit_histogram <- function(df, ..., facet, breaks, xlab='Probability Integral Tr
     results_m$model <- m
     results <- bind_rows(results, results_m)
   }
-  
+
   results$model <- factor(results$model)
   results$model <- recode_factor(results$model, "COVIDhub-baseline"="Baseline")
   results$model <- fct_relevel(results$model, "Baseline", after = Inf)
@@ -51,7 +51,7 @@ upit_histogram <- function(df, ..., facet, breaks, xlab='Probability Integral Tr
   try(results$model <- factor(results$model, labels=c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", "GQRA[2]", "GQRA[3]", "GQRA[4]",
                                                   "QRA[2]", "QRA[3]", "QRA[4]", "Baseline")),
       silent=TRUE)
-  
+
   ggplot(results, aes(alpha, upit)) + 
     geom_rect(aes(xmin = alpha, xmax = lead(alpha), ymin = 0, ymax = lead(upit)), 
               color="black", fill = "black", alpha = 0.3)+
@@ -97,6 +97,9 @@ upit_histogram(subset(df, location != "US" & window_size==4), model, target_end_
 
 ggsave('plots/1wk_ahead/upit_ensembles_1wk_23.png', width=15.5, height=18, dpi=500, unit='cm', device='png')
 ggsave('plots/4wk_ahead/upit_ensembles_4wk_20.png', width=15.5, height=18, dpi=500, unit='cm', device='png')
+
+ggsave('plots/1wk_ahead/upit_ensembles_1wk.png', width=15.5, height=13, dpi=500, unit='cm', device='png')
+
 
 upit_histogram(subset(c, location_name=="California"), target_end_date, location, facet=model, breaks=seq(0, 1, 0.1))
 

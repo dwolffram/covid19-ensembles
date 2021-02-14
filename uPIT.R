@@ -190,7 +190,7 @@ alphas <- sort(c(unique(c(alphas/2, 1-alphas/2)),0.5))
 sample <- rnorm(5000, 0, 1)
 
 # 0.8, 1.2
-F <- qnorm(p=alphas, 0, 0.8)
+F <- qnorm(p=alphas, 0, 1)
 F <- data.frame(quantile=alphas, value=F)
 
 df <- bind_rows(replicate(length(sample), F, simplify = FALSE))
@@ -198,6 +198,7 @@ df$truth <- rep(sample, each=length(alphas))
 df$index <- rep(1:length(sample), each=length(alphas))
 
 upit_histogram(df, index, xlab="uPIT")
+ggsave('plots/examples/uPIT/upit_norm_23alphas.png', width=9, height=6, dpi=500, unit='cm', device='png')
 
 ggsave('plots/examples/uPIT/upit_norm_23alphas_underdispersed.png', width=9, height=6, dpi=500, unit='cm', device='png')
 
