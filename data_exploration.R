@@ -125,7 +125,24 @@ relevant_models <- relevant_models %>%
   filter(start <= "2020-05-23") %>%
   pull(model)
 
+
+
 relevant_models
 # [1] "CovidAnalytics-DELPHI" "COVIDhub-baseline"     "CU-scenario_high"      "CU-select"            
 # [5] "JHU_IDD-CovidSP"       "LANL-GrowthRate"       "MOBS-GLEAM_COVID"      "PSI-DRAFT"            
 # [9] "UCLA-SuEIR"            "UMass-MechBayes"       "YYG-ParamSearch"
+
+
+relevant_models <- relevant_models %>%
+  filter(start <= "2020-08-01" & end > '2020-10-10') %>%
+  pull(model)
+
+# [1] "CovidAnalytics-DELPHI" "COVIDhub-baseline"     "CU-scenario_high"      "CU-select"             "DDS-NBDS"             
+# [6] "JHU_IDD-CovidSP"       "Karlen-pypm"           "LANL-GrowthRate"       "MOBS-GLEAM_COVID"      "NotreDame-mobility"   
+# [11] "OliverWyman-Navigator" "PSI-DRAFT"             "RobertWalraven-ESG"    "UA-EpiCovDA"           "UCLA-SuEIR"           
+# [16] "UMass-MechBayes" 
+
+ggsave('plots/model_availability_filtered_new.png', width=15.5, height=12, dpi=500, unit='cm', device='png')
+
+
+
