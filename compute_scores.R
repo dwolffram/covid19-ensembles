@@ -77,10 +77,17 @@ df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ense
 ensemble_scores <- score_forecasts(df_ensembles)
 write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_KarOlUM.csv", row.names=FALSE)
 
+df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_KarUMBa.csv", add_baseline = TRUE)
+ensemble_scores <- score_forecasts(df_ensembles)
+write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_KarUMBa.csv", row.names=FALSE)
+
 
 df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all.csv", remove_revisions=TRUE, long_format=TRUE)
 
 df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_KarOlUM.csv", remove_revisions=TRUE, long_format=TRUE)
+
+df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_KarUMBa.csv", remove_revisions=TRUE, long_format=TRUE)
+
 
 plot_wis(df, locations='states', window_sizes=4, x=model, facet=NULL, angle=90, vjust=0.5)
 
@@ -112,6 +119,34 @@ ggplot(subset(df, location != "US" & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pe
   labs(x = NULL,
        y = "Mean WIS")
 
+
+ggsave('plots/evaluation_study/mean_wis_1wk.png', width=30, height=15, dpi=500, unit='cm', device='png')
+
+
+# combine all versions
+
+df1 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all.csv", remove_revisions=TRUE, long_format=TRUE)
+
+df2 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_KarOlUM.csv", remove_revisions=TRUE, long_format=TRUE)
+df2$model <- paste0(df2$model, '-3')
+
+df3 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_KarUMBa.csv", remove_revisions=TRUE, long_format=TRUE)
+df3$model <- paste0(df3$model, '-3B')
+
+df <- bind_rows(df1, df2, df3)
+
+ggplot(subset(df, location != "US" & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
+       aes(x=reorder(model, value), y=value,
+           fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
+  theme_gray(base_size=10) +
+  theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1), 
+        legend.position = "right") +
+  scale_fill_viridis(discrete=TRUE, name = NULL,
+                     labels = c("Overprediction", "Dispersion", "Underprediction"))+
+  #scale_x_discrete(labels = function(l) parse(text=l)) + 
+  labs(x = NULL,
+       y = "Mean WIS")
 
 ## individual scores
 

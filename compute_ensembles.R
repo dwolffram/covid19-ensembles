@@ -77,6 +77,10 @@ models <- c("Karlen-pypm",
             "OliverWyman-Navigator",     
             "UMass-MechBayes")
 
+models <- c("Karlen-pypm",
+            "COVIDhub-baseline",     
+            "UMass-MechBayes")
+
 exclude_locations <- c("11", "60", "66", "69", "72", "74", "78")
 
 df <- load_forecasts(models=models, targets=c("1 wk ahead cum death"),
@@ -90,12 +94,12 @@ registerDoParallel(cores=no_cores)
 
 ensembles <- c("EWA", "MED", "INV", "V2", "V3", "V4", "QRA2", "QRA3", 
                "QRA4", "GQRA2", "GQRA3", "GQRA4")
-window_sizes <- 3:4
+window_sizes <- 1:4
 
 df_ensembles <- ensemble_forecasts(df, window_sizes=window_sizes, ensembles=ensembles, 
                                    exclude_us_from_training=TRUE)
 
-file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_all_ws34_", Sys.Date(), ".csv")
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_KarUMBa", Sys.Date(), ".csv")
 write.csv(df_ensembles, file_name, row.names=FALSE)
 
 ## combine
