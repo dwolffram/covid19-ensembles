@@ -116,6 +116,10 @@ build_ensembles <- function(df_train, df_test,
               p <- inv_fit(df_train)
               df_forecast <- INV(df_test, params=p)
             },
+            "INVA" = {
+              p <- inva_fit(df_train)
+              df_forecast <- INVA(df_test, params=p)
+            },
             "V2" = {
               p <- v2_fit(df_train)
               df_forecast <- V2(df_test, params=p)

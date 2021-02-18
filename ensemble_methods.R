@@ -51,6 +51,28 @@ inv_fit <- function(df){
   return(params)
 }
 
+# performance across all locations
+INVA <- function(df, params){
+  df_temp <- merge(df, params, by=c('model'))
+  inv <- df_temp %>%
+    mutate(weighted_values = value * param) %>%
+    group_by(target_end_date, location, target, quantile, truth) %>% 
+    summarize(value = sum(weighted_values)) %>%
+    as.data.frame()
+  return(inv)
+}
+
+inva_fit <- function(df){
+  train_wis <- score_forecasts(df, scores='wis')
+  params <- train_wis %>%
+    group_by(model) %>%
+    summarize(param = sum(wis))%>%
+    mutate_at('param', ~replace(., . == 0, min(.[. > 0])/2)) %>% # if 0, use 0.5*(lowest non-zero wis)
+    mutate(param = (1/param)/(sum(1/param))) %>%
+    as.data.frame()
+  return(params)
+}
+
 ### Vincentization
 # V3 and V4 together
 V3 <- function(df, params, intercept=0){

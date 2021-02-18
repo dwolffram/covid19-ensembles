@@ -119,3 +119,14 @@ unique(df$target_end_date)
 
 file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_all.csv")
 write.csv(df, file_name, row.names=FALSE)
+
+## INVA
+
+ensembles <- c("INVA")
+window_sizes <- 1:4
+
+df_ensembles <- ensemble_forecasts(df, window_sizes=window_sizes, ensembles=ensembles, 
+                                   exclude_us_from_training=TRUE)
+
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_KarOlUM_INVA_", Sys.Date(), ".csv")
+write.csv(df_ensembles, file_name, row.names=FALSE)

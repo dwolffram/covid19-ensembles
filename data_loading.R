@@ -171,7 +171,7 @@ load_ensembles <- function(filename, add_truth=FALSE, add_baseline=FALSE,
                    quantile = col_double(),
                    value = col_double(),
                    window_size = col_factor(c("1", "2", "3","4")),
-                   model = col_factor(c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4', 'GQRA2', 
+                   model = col_factor(c('EWA', 'MED', 'INV', 'INVA', 'V2', 'V3', 'V4', 'GQRA2', 
                                         'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4')))
   ) %>% as.data.frame()
   
@@ -188,7 +188,7 @@ load_ensembles <- function(filename, add_truth=FALSE, add_baseline=FALSE,
     df_baseline$window_size <- factor(rep(1:4, each = nrow(df_baseline)/4))
     
     df <- bind_rows(df, df_baseline)
-    df$model <- fct_relevel(df$model, c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4', 
+    df$model <- fct_relevel(df$model, c('EWA', 'MED', 'INV', 'INVA', 'V2', 'V3', 'V4', 
                                         'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4', 'Baseline'))
   }
 
@@ -237,7 +237,7 @@ load_scores <- function(filename, scores=c('ae', 'wis', 'wis_decomposition'),
   
   # fix order of ensemble model names
   if(str_detect(filename, 'ensemble')){
-    df$model <- factor(df$model, levels=intersect(c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4', 
+    df$model <- factor(df$model, levels=intersect(c('EWA', 'MED', 'INV', 'INVA', 'V2', 'V3', 'V4', 
                                                     'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
                                                     'Baseline'),
                                                   unique(df$model)))
