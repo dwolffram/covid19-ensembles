@@ -34,9 +34,20 @@ train_test_split <- function(df, test_date, horizon, window_size){
 # df_train <- dfs$df_train
 # df_test <- dfs$df_test
 
+# returns n models with the lowest wis on df
+get_top_n_models <- function(df, n=3){
+  top_n_models <- wis(df) %>% 
+    group_by(model) %>%
+    summarize(wis = mean(wis)) %>%
+    slice_min(wis, n=n) %>%
+    pull(model)
+  
+  return(top_n_models)
+}
+
 
 ensemble_forecasts <- function(df, dates, window_sizes, ensembles=c("EWA"), 
-                               exclude_us_from_training=FALSE){
+                               exclude_us_from_training=FALSE, n_models){
   
   horizon <- as.numeric(substr(unique(df$target), 1, 1)) # first character of target is the horizon
 
@@ -70,7 +81,7 @@ ensemble_forecasts <- function(df, dates, window_sizes, ensembles=c("EWA"),
           
           df_test <- dfs$df_test
           
-          df_forecasts <- build_ensembles(df_train, df_test, ensembles)
+          df_forecasts <- build_ensembles(df_train, df_test, ensembles, n_models)
           df_forecasts$window_size <- window_size
           df_forecasts
         },
@@ -100,7 +111,19 @@ ensemble_forecasts <- function(df, dates, window_sizes, ensembles=c("EWA"),
 build_ensembles <- function(df_train, df_test, 
                             ensembles=c("EWA", "MED", "INV", "V2", "V3", "V4", 
                                         "QRA2", "QRA3", "QRA4", 
-                                        "GQRA2", "GQRA3", "GQRA4")){
+                                        "GQRA2", "GQRA3", "GQRA4"),
+                            n_models){
+  
+  # only use best n_models models for ensembles
+  top_n_models <- get_top_n_models(df_train, n_models)
+  
+  df_train <- df_train %>%
+    filter(model %in% top_n_models)
+  
+  df_test <- df_test %>%
+    filter(model %in% top_n_models)
+  
+  
   df_ensembles <- data.frame()
 
   for (ensemble in ensembles){

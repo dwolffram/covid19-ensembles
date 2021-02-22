@@ -76,7 +76,7 @@ inva_fit <- function(df){
 ### Vincentization
 # V3 and V4 together
 V3 <- function(df, params, intercept=0){
-  params <- data.frame(model=models, param=params)
+  params <- data.frame(model=sort(unique(df$model)), param=params)
   df_temp <- merge(df, params, by.x = "model", by.y = "model")
   v3 <- df_temp %>%
     mutate(weighted_values = value * param) %>%
@@ -243,7 +243,7 @@ L <- function(alpha, x, y){
 }
 
 # Function to minimize for QRA2
-fn <- function(alpha, df_alpha, params){
+fn <- function(alpha, df_alpha, models, params){
   params <- data.frame(model=models[-length(models)], 
                        quantile=alpha,
                        param=params)
@@ -291,7 +291,7 @@ qra2_fit <- function(df){
     df_alpha <- subset(df, quantile==quantile_level)
     params <- constrOptim(theta = rep(1/n_models, n_models - 1), 
                           f = function(x){
-                            return(fn(quantile_level, df_alpha, params = x))},
+                            return(fn(quantile_level, df_alpha, models=models, params = x))},
                           ui=ui, ci=ci, method="Nelder-Mead")$par
     
     params <- data.frame(model=models[-length(models)], quantile=quantile_level, 
