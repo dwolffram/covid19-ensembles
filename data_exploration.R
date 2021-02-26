@@ -4,7 +4,7 @@ library(ggplot2)
 
 df <- load_forecasts()
 
-df <- load_forecasts(targets = c("1 wk ahead cum death"))
+df <- load_forecasts(targets = c("1 wk ahead cum death"), exclude_locations=exclude_locations)
 
 
 get_available_models <- function(df, target="1 wk ahead cum death", exclude_gaps=FALSE, 
@@ -85,6 +85,9 @@ plot_availability <- function(df, target="1 wk ahead cum death", exclude_gaps=FA
       
 }
 
+plot_availability(df, target = "1 wk ahead cum death", drop_incomplete=TRUE, exclude_gaps = TRUE, min_no_locations = 51)
+
+
 plot_availability(df, target = "1 wk ahead cum death", title=NULL)
 plot_availability(df, target = "1 wk ahead cum death", exclude_gaps = TRUE)
 plot_availability(df, target = "1 wk ahead cum death", drop_incomplete = TRUE)
@@ -100,6 +103,19 @@ plot_availability(df, target = "1 wk ahead inc death", drop_incomplete = TRUE, e
 ggsave('plots/model_availability.png', width=15.5, height=19, dpi=500, unit='cm', device='png')
 ggsave('plots/model_availability_filtered.png', width=15.5, height=12, dpi=500, unit='cm', device='png')
 
+
+
+temp <- df %>% 
+  group_by(model, target_end_date) %>%
+  summarize(locations = length(unique(location))) 
+
+a <- df %>%
+  filter(model == "RobertWalraven-ESG" & target_end_date == "2020-08-01") %>%
+  summarize(locations = (unique(location)))
+
+b <- df %>%
+  filter(model == "UCLA-SuEIR" & target_end_date == "2020-08-01") %>%
+  summarize(locations = (unique(location)))
 
 
 a <- df %>%

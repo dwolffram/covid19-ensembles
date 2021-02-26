@@ -68,6 +68,10 @@ write.csv(individual_scores, "scores/individual_scores_4wk.csv", row.names=FALSE
 
 #### NEW EVALUATION STUDY
 
+df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_all_ws4.csv", add_baseline = TRUE)
+ensemble_scores <- score_forecasts(df_ensembles)
+write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4.csv", row.names=FALSE)
+
 df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_all.csv", add_baseline = TRUE)
 ensemble_scores <- score_forecasts(df_ensembles)
 write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_all.csv", row.names=FALSE)
@@ -257,3 +261,106 @@ individual_scores <- score_forecasts(df_individual)
 write.csv(individual_scores, "scores/evaluation_study/individual_scores_1wk.csv", row.names=FALSE)
 
 unique(df$target_end_date)
+
+### Flexible subset of models
+
+df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_top3_ws4.csv", add_baseline = TRUE)
+ensemble_scores <- score_forecasts(df_ensembles)
+write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_top3_ws4.csv", row.names=FALSE)
+
+df3 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_top3_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
+
+ggplot(subset(df3, location !='US' & window_size==4 & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
+       aes(x=reorder(model, value), y=value,
+           fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
+  theme_gray(base_size=10) +
+  theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1), 
+        legend.position = "right") +
+  scale_fill_viridis(discrete=TRUE, name = NULL,
+                     labels = c("Overprediction", "Dispersion", "Underprediction"))+
+  #scale_x_discrete(labels = function(l) parse(text=l)) + 
+  labs(x = NULL,
+       y = "Mean WIS")
+
+df1 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
+
+df2 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_KarOlUM.csv", remove_revisions=TRUE, long_format=TRUE)
+df2$model <- paste0(df2$model, '-3')
+
+df3$model <- paste0(df3$model, '-3F')
+
+df_all <- bind_rows(df1, df2, df3)
+
+ggplot(subset(df_all, location != 'US' & window_size==4 & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
+       aes(x=reorder(model, value), y=value,
+           fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
+  theme_gray(base_size=10) +
+  theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1), 
+        legend.position = "right") +
+  scale_fill_viridis(discrete=TRUE, name = NULL,
+                     labels = c("Overprediction", "Dispersion", "Underprediction"))+
+  #scale_x_discrete(labels = function(l) parse(text=l)) + 
+  labs(x = NULL,
+       y = "Mean WIS")
+
+df_all <- bind_rows(df1, df3)
+
+ggplot(subset(df_all, location != 'US' & window_size==4 & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
+       aes(x=reorder(model, value), y=value,
+           fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
+  theme_gray(base_size=10) +
+  theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1), 
+        legend.position = "right") +
+  scale_fill_viridis(discrete=TRUE, name = NULL,
+                     labels = c("Overprediction", "Dispersion", "Underprediction"))+
+  #scale_x_discrete(labels = function(l) parse(text=l)) + 
+  labs(x = NULL,
+       y = "Mean WIS")
+
+length(unique(df$model))
+
+ggsave('plots/evaluation_study/mean_wis_1wk_3F.png', width=20, height=15, dpi=500, unit='cm', device='png')
+
+scores <- df_all %>%
+  filter(location != 'US' & window_size==4 & score == 'wis') %>%
+  group_by(model) %>%
+  summarize(mean_wis = mean(value))
+
+### INDIVIDUAL MODELS
+
+# 1 wk ahead
+
+df_individual <- load_forecasts(models = c("COVIDhub-ensemble"),
+                                targets = "1 wk ahead cum death",
+                                exclude_locations = c("11", "60", "66", "69", "72", "74", "78"), 
+                                start_date = "2020-08-29", 
+                                end_date = "2021-02-06") %>% 
+  select(-c(forecast_date, type)) %>%
+  select(target_end_date, everything())
+
+individual_scores <- score_forecasts(df_individual)
+
+write.csv(individual_scores, "scores/evaluation_study/COVIDhub-ensemble_scores_1wk.csv", row.names=FALSE)
+
+individual_scores <- load_scores("scores/evaluation_study/COVIDhub-ensemble_scores_1wk.csv", remove_revisions=TRUE, long_format=TRUE)
+
+individual_scores$window_size = '4'
+df_all <- bind_rows(df_all, individual_scores)
+
+ggplot(subset(df_all, location != 'US' & window_size==4 & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
+       aes(x=reorder(model, value), y=value,
+           fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
+  theme_gray(base_size=12) +
+  theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1), 
+        legend.position = "right") +
+  scale_fill_viridis(discrete=TRUE, name = NULL,
+                     labels = c("Overprediction", "Dispersion", "Underprediction"))+
+  #scale_x_discrete(labels = function(l) parse(text=l)) + 
+  labs(x = NULL,
+       y = "Mean WIS")
+
+ggsave('plots/evaluation_study/mean_wis_1wk_ensembles.png', width=20, height=15, dpi=500, unit='cm', device='png')

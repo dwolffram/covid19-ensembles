@@ -68,9 +68,11 @@ write.csv(df_ensembles, file_name, row.names=FALSE)
 
 #### NEW EVALUATION STUDY
 
+#"RobertWalraven-ESG" removed
+
 models <- c("CovidAnalytics-DELPHI", "COVIDhub-baseline", "CU-select", "DDS-NBDS",             
             "JHU_IDD-CovidSP", "Karlen-pypm", "LANL-GrowthRate", "MOBS-GLEAM_COVID",
-            "OliverWyman-Navigator", "PSI-DRAFT", "RobertWalraven-ESG", "UA-EpiCovDA", "UCLA-SuEIR",           
+            "OliverWyman-Navigator", "PSI-DRAFT", "UA-EpiCovDA", "UCLA-SuEIR",           
             "UMass-MechBayes")
 
 models <- c("Karlen-pypm",
@@ -84,7 +86,7 @@ models <- c("Karlen-pypm",
 exclude_locations <- c("11", "60", "66", "69", "72", "74", "78")
 
 df <- load_forecasts(models=models, targets=c("1 wk ahead cum death"),
-                     exclude_locations=exclude_locations, start_date="2020-08-01",
+                     exclude_locations=exclude_locations, start_date="2020-08-01", end_date="2021-02-06", 
                      intersect_dates=TRUE)
 
 length(unique(df$target_end_date))
@@ -92,14 +94,14 @@ length(unique(df$target_end_date))
 no_cores <- 32
 registerDoParallel(cores=no_cores)  
 
-ensembles <- c("EWA", "MED", "INV", "V2", "V3", "V4", "QRA2", "QRA3", 
+ensembles <- c("EWA", "MED", "INV", "INVA", "V2", "V3", "V4", "QRA2", "QRA3", 
                "QRA4", "GQRA2", "GQRA3", "GQRA4")
-window_sizes <- 1:4
+window_sizes <- 4
 
 df_ensembles <- ensemble_forecasts(df, window_sizes=window_sizes, ensembles=ensembles, 
                                    exclude_us_from_training=TRUE)
 
-file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_KarUMBa", Sys.Date(), ".csv")
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_all_ws4_", Sys.Date(), ".csv")
 write.csv(df_ensembles, file_name, row.names=FALSE)
 
 ## combine
@@ -130,3 +132,23 @@ df_ensembles <- ensemble_forecasts(df, window_sizes=window_sizes, ensembles=ense
 
 file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_KarOlUM_INVA_", Sys.Date(), ".csv")
 write.csv(df_ensembles, file_name, row.names=FALSE)
+
+
+# Ensembles on Subset
+
+ensembles <- c("EWA", "MED", "INV", "INVA", "V2", "V3", "V4", "QRA2", "QRA3", 
+               "QRA4", "GQRA2", "GQRA3", "GQRA4")
+window_sizes <- 1:4
+
+# dates <- as.Date(c("2020-07-25", "2020-08-01", "2020-08-08", "2020-08-15", "2020-08-22"))
+
+df_ensembles <- ensemble_forecasts(df, window_sizes=window_sizes, ensembles=ensembles,
+                                   exclude_us_from_training=TRUE, n_models = 3)
+
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_top3_ws1234_", Sys.Date(), ".csv")
+write.csv(df_ensembles, file_name, row.names=FALSE)
+
+
+df1 <- subset(df_ensembles, window_size==4)
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_top3_ws4.csv")
+write.csv(df1, file_name, row.names=FALSE)

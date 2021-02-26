@@ -47,7 +47,7 @@ get_top_n_models <- function(df, n=3){
 
 
 ensemble_forecasts <- function(df, dates, window_sizes, ensembles=c("EWA"), 
-                               exclude_us_from_training=FALSE, n_models){
+                               exclude_us_from_training=FALSE, n_models='all'){
   
   horizon <- as.numeric(substr(unique(df$target), 1, 1)) # first character of target is the horizon
 
@@ -112,18 +112,19 @@ build_ensembles <- function(df_train, df_test,
                             ensembles=c("EWA", "MED", "INV", "V2", "V3", "V4", 
                                         "QRA2", "QRA3", "QRA4", 
                                         "GQRA2", "GQRA3", "GQRA4"),
-                            n_models){
+                            n_models='all'){
   
-  # only use best n_models models for ensembles
-  top_n_models <- get_top_n_models(df_train, n_models)
-  
-  df_train <- df_train %>%
-    filter(model %in% top_n_models)
-  
-  df_test <- df_test %>%
-    filter(model %in% top_n_models)
-  
-  
+  if(n_models != 'all'){
+    # only use best n_models models for ensembles
+    top_n_models <- get_top_n_models(df_train, n_models)
+    
+    df_train <- df_train %>%
+      filter(model %in% top_n_models)
+    
+    df_test <- df_test %>%
+      filter(model %in% top_n_models)
+  }
+
   df_ensembles <- data.frame()
 
   for (ensemble in ensembles){
