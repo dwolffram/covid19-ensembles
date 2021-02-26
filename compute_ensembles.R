@@ -152,5 +152,3 @@ write.csv(df_ensembles, file_name, row.names=FALSE)
 df1 <- subset(df_ensembles, window_size==4)
 file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_top3_ws4.csv")
 write.csv(df1, file_name, row.names=FALSE)
-
-# test
