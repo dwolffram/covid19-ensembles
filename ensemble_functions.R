@@ -182,6 +182,10 @@ build_ensembles <- function(df_train, df_test,
               groups <- get_quantile_groups()
               p <- gqra4_fit(df_train, groups)
               df_forecast <- GQRA_4(df_test, groups, p$params, p$intercepts)
+            },
+            "QNA3" = {
+              p <- qna3_fit(df_train)
+              df_forecast <- QNA3(df_test, p$params, p$intercepts)
             }
     )
     df_forecast <- sort_quantiles(df_forecast)

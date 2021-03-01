@@ -21,6 +21,90 @@ dfs <- train_test_split(df, test_date=as.Date("2020-08-22"), horizon=1, window_s
 df_train <- dfs$df_train
 df_test <- dfs$df_test
 
+### QNA
+params <- inva_fit(df_train)
+intercepts <- data.frame(quantile=get_quantile_levels(), intercept=c(1:22, 100000))
+
+df_temp <- merge(df_train, params, by = "model")
+df_temp <- merge(df_temp, intercepts, by = "quantile")
+
+params <- data.frame(model=sort(unique(df$model)), param=params)
+
+qna3 <- df_temp %>%
+  mutate(weighted_values = value * param) %>%
+  group_by(target_end_date, location, target, quantile, truth) %>% 
+  summarize(value = sum(weighted_values)) %>%
+  as.data.frame()
+qna3 <- merge(qna3, intercepts, by = "quantile") %>% 
+  mutate(value = value + intercept) %>% 
+  select(-intercept)
+
+
+# params: data.frame with columns: model, quantile, param
+# intercepts: data.frame with columns: quantile, intercept
+QNA3 <- function(df, params, intercepts){
+  df_temp <- merge(df, params, by = "model")
+  qna3 <- df_temp %>%
+    mutate(weighted_values = value * param) %>%
+    group_by(target_end_date, location, target, quantile, truth) %>% 
+    summarize(value = sum(weighted_values)) %>%
+    as.data.frame()
+  qna3 <- merge(qna3, intercepts, by = "quantile") %>% 
+    mutate(value = value + intercept) %>% 
+    select(-intercept)
+  return(qna3)
+}
+
+
+
+qna3_loss <- function(df, params, intercepts){
+  df_temp <- QNA3(df, params, intercepts)
+  return(mean_wis(df_temp))
+}
+
+qna3_transform_params <- function(df, params, intercepts){
+  models <- unique(df$model)
+  quantiles <- unique(df$quantile)
+
+  params <- data.frame(model = models, 
+                       param = params)
+  
+  intercepts <- data.frame(quantile = quantiles, 
+                           intercept = intercepts)
+  
+  return(list(params=params, intercepts=intercepts))
+}
+
+
+qna3_fit <- function(df, method="BFGS"){
+  n_models = length(unique(df$model))
+  n_quantiles = length(unique(df$quantile))
+  
+  # the first n_groups entries are the values of the intercepts
+  p_optim <- optim(par = c(rep(0, n_quantiles), rep(1/n_models, n_models)), 
+                   fn = function(x){
+                     # transform vector to required format
+                     temp <- qna3_transform_params(df,
+                                                    params = x[(n_quantiles+1):length(x)], 
+                                                    intercepts = x[1:n_quantiles])
+                     return(qna3_loss(df, params = temp$params, 
+                                       intercepts = temp$intercepts))},
+                   method = method)$par
+  
+  intercepts <- p_optim[1 : n_quantiles]
+  params <- p_optim[(n_quantiles+1) : length(p_optim)]
+  temp <- qna3_transform_params(df, params, intercepts)
+  return(temp)
+}
+
+p <- qna3_fit(df_train)
+qna3_loss(df_test, p$params, p$intercepts)
+
+
+params = data.frame(model=unique(df$model), param=rep(0.1, 10))
+intercepts = data.frame(quantile=unique(df$quantile), intercept=rep(0, 23))
+
+qna3_loss(df_test, params, intercepts)
 
 ### EWA
 ewa_df <- EWA(df_test)
