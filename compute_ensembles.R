@@ -133,6 +133,17 @@ df_ensembles <- ensemble_forecasts(df, window_sizes=window_sizes, ensembles=ense
 file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_KarOlUM_INVA_", Sys.Date(), ".csv")
 write.csv(df_ensembles, file_name, row.names=FALSE)
 
+## QNA
+
+ensembles <- c("QNA3")
+window_sizes <- 4
+
+df_ensembles <- ensemble_forecasts(df, window_sizes=window_sizes, ensembles=ensembles, 
+                                   exclude_us_from_training=TRUE)
+
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_all_QNA3_", Sys.Date(), ".csv")
+write.csv(df_ensembles, file_name, row.names=FALSE)
+
 
 # Ensembles on Subset
 
