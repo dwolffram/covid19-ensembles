@@ -68,6 +68,11 @@ write.csv(individual_scores, "scores/individual_scores_4wk.csv", row.names=FALSE
 
 #### NEW EVALUATION STUDY
 
+df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_all_QNA3_2021-03-01.csv", 
+                               add_baseline = TRUE)
+ensemble_scores <- score_forecasts(df_ensembles)
+write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_all_QNA3_ws4.csv", row.names=FALSE)
+
 df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_all_ws4.csv", add_baseline = TRUE)
 ensemble_scores <- score_forecasts(df_ensembles)
 write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4.csv", row.names=FALSE)
@@ -102,8 +107,23 @@ df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_KarOlUM.csv"
 
 df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_KarUMBa.csv", remove_revisions=TRUE, long_format=TRUE)
 
+df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all_QNA3_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
+
 
 plot_wis(df, locations='states', window_sizes=4, x=model, facet=NULL, angle=90, vjust=0.5)
+
+ggplot(subset(df, location !='US' & window_size==4 & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
+       aes(x=reorder(model, value), y=value,
+           fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
+  theme_gray(base_size=10) +
+  theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1), 
+        legend.position = "right") +
+  scale_fill_viridis(discrete=TRUE, name = NULL,
+                     labels = c("Overprediction", "Dispersion", "Underprediction"))+
+  #scale_x_discrete(labels = function(l) parse(text=l)) + 
+  labs(x = NULL,
+       y = "Mean WIS")
 
 df$model <- paste0(df$model, '-3')
 
@@ -325,6 +345,11 @@ length(unique(df$model))
 ggsave('plots/evaluation_study/mean_wis_1wk_3F.png', width=20, height=15, dpi=500, unit='cm', device='png')
 
 scores <- df_all %>%
+  filter(location != 'US' & window_size==4 & score == 'wis') %>%
+  group_by(model) %>%
+  summarize(mean_wis = mean(value))
+
+scores <- df %>%
   filter(location != 'US' & window_size==4 & score == 'wis') %>%
   group_by(model) %>%
   summarize(mean_wis = mean(value))
