@@ -32,15 +32,18 @@ no_cores <- 32
 registerDoParallel(cores=no_cores)  
 
 ensembles <- c("EWA", "MED", "INV", "INVA", "V2", "V3", "V4", "QRA2", "QRA3", 
-               "QRA4", "GQRA2", "GQRA3", "GQRA4")
+               "QRA4", "GQRA2", "GQRA3", "GQRA4", "QNA3")
 window_sizes <- 4
 
 df_ensembles <- ensemble_forecasts(df, window_sizes=window_sizes, ensembles=ensembles, 
-                                   exclude_us_from_training=TRUE)
+                                   exclude_us_from_training=TRUE, in_sample=TRUE)
 
-file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_all_ws4_", Sys.Date(), ".csv")
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_all_ws4_inSample_", Sys.Date(), ".csv")
 write.csv(df_ensembles, file_name, row.names=FALSE)
 
+comb <- function(x){
+  lapply(transpose(x), function(l) do.call(rbind, l))
+}
 
 ensemble_forecasts <- function(df, dates, window_sizes, ensembles=c("EWA"), 
                                exclude_us_from_training=FALSE, n_models='all', in_sample=FALSE){
@@ -113,9 +116,9 @@ ensemble_forecasts <- function(df, dates, window_sizes, ensembles=c("EWA"),
 
 
 build_ensembles <- function(df_train, df_test, 
-                            ensembles=c("EWA", "MED", "INV", "V2", "V3", "V4", 
+                            ensembles=c("EWA", "MED", "INV", "INVA", "V2", "V3", "V4", 
                                         "QRA2", "QRA3", "QRA4", 
-                                        "GQRA2", "GQRA3", "GQRA4"),
+                                        "GQRA2", "GQRA3", "GQRA4", "QNA3"),
                             n_models='all', in_sample=FALSE){
   
   if(n_models != 'all'){
@@ -242,23 +245,24 @@ res2 <- res
 
 rall <- list(res, res2)
 
-comb <- function(x){
-  lapply(transpose(x), function(l) do.call(rbind, l))
-}
+
 
 b <- comb(rall)
 
 a <- lapply(transpose(rall), function(l) do.call(rbind, l))
 
 e <- ensemble_forecasts(df, as.Date(c("2020-08-01", "2020-08-08", "2020-08-15", "2020-08-22", "2020-08-29",
-                                      "2020-09-05", "2020-09-12")), window_sizes = 4, 
-                        exclude_us_from_training=TRUE, ensembles=c("EWA", "MED", "INV", "V3", "INVA"), in_sample=TRUE)
+                                      "2020-09-05", "2020-09-12", "2020-09-19")), window_sizes = 4, 
+                        exclude_us_from_training=TRUE, ensembles=c("EWA", "MED", "INV", "INVA"), in_sample=TRUE)
 
 oos <- e[[1]]
 is <- e[[2]]
 
 is$target_end_date <- paste0(is$target_end_date, '_', is$id_date)
 so <- wis(is)
+so %>% group_by(model) %>% summarize(wis = mean(wis))
+
+so <- wis(oos)
 so %>% group_by(model) %>% summarize(wis = mean(wis))
 
 unique(df$target_end_date)
