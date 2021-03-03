@@ -172,7 +172,8 @@ load_ensembles <- function(filename, add_truth=FALSE, add_baseline=FALSE,
                    value = col_double(),
                    window_size = col_factor(c("1", "2", "3","4")),
                    model = col_factor(c('EWA', 'MED', 'INV', 'INVA', 'V2', 'V3', 'V4', 'GQRA2', 
-                                        'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4', 'QNA3')))
+                                        'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4', 'QNA3')),
+                   id_date = col_date(format = ""))
   ) %>% as.data.frame()
   
   if(add_baseline){
@@ -213,24 +214,42 @@ load_ensembles <- function(filename, add_truth=FALSE, add_baseline=FALSE,
 
 load_scores <- function(filename, scores=c('ae', 'wis', 'wis_decomposition'), 
                         add_truth=FALSE, remove_revisions=FALSE, 
-                        add_location_names=TRUE, long_format=FALSE){
+                        add_location_names=TRUE, long_format=FALSE, in_sample=FALSE){
   
   if('wis_decomposition' %in% scores){
     scores <- scores[scores != 'wis_decomposition']
     scores <- c(scores, 'wgt_pen_u', 'wgt_iw', 'wgt_pen_l')
   }
   
-  df <- read_csv(filename, 
-                 col_types = cols(
-                   target = col_character(),
-                   target_end_date = col_date(format = ""),
-                   location = col_character()
-                 )
-  ) %>%
-    pivot_longer(cols=-any_of(c("target_end_date", "location", "location_name", "target",  "model",  "window_size",  "truth")),
-                 names_to="score") %>%
-    filter(score %in% scores) %>%
-    as.data.frame()
+  if(!in_sample){
+    df <- read_csv(filename, 
+                   col_types = cols(
+                     target = col_character(),
+                     target_end_date = col_date(format = ""),
+                     location = col_character()
+                   )
+    ) %>%
+      pivot_longer(cols=-any_of(c("target_end_date", "location", "location_name", "target",  "model",  "window_size",  "truth")),
+                   names_to="score") %>%
+      filter(score %in% scores) %>%
+      as.data.frame()
+  }
+  else{
+    df <- read_csv(filename, 
+                   col_types = cols(
+                     target = col_character(),
+                     target_end_date = col_character(),
+                     location = col_character(),
+                     id_date = col_date(format = "")
+                   )
+    ) %>%
+      pivot_longer(cols=-any_of(c("target_end_date", "location", "location_name", "target",  "model",  "window_size",  "truth", 
+                                  "id_date")),
+                   names_to="score") %>%
+      filter(score %in% scores) %>%
+      as.data.frame()
+  }
+
   
   if('window_size' %in% colnames(df)){
     df$window_size <- factor(df$window_size, levels=c("1", "2", "3","4"))

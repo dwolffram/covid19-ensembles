@@ -389,3 +389,36 @@ ggplot(subset(df_all, location != 'US' & window_size==4 & score %in% c("wgt_pen_
        y = "Mean WIS")
 
 ggsave('plots/evaluation_study/mean_wis_1wk_ensembles.png', width=20, height=15, dpi=500, unit='cm', device='png')
+
+
+### in-sample and out-of-sample scores
+
+df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_all_ws4_is.csv", 
+                               add_baseline = TRUE)
+df_ensembles <- subset(df_ensembles, window_size==4)
+df_ensembles <- add_truth(df_ensembles)
+df_ensembles$target_end_date <- paste0(df_ensembles$target_end_date, '_', df_ensembles$id_date)
+
+ensemble_scores <- score_forecasts(df_ensembles)
+write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4_is.csv", row.names=FALSE)
+
+df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4_is.csv", 
+                  remove_revisions=TRUE, long_format=TRUE, in_sample=TRUE)
+
+ggplot(subset(df, location != 'US' & window_size==4 & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
+       aes(x=reorder(model, value), y=value,
+           fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
+  theme_gray(base_size=12) +
+  theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1), 
+        legend.position = "right") +
+  scale_fill_viridis(discrete=TRUE, name = NULL,
+                     labels = c("Overprediction", "Dispersion", "Underprediction"))+
+  #scale_x_discrete(labels = function(l) parse(text=l)) + 
+  labs(x = NULL,
+       y = "Mean WIS")
+
+scores <- df %>%
+  filter(location != 'US' & window_size==4 & score == 'wis') %>%
+  group_by(model) %>%
+  summarize(mean_wis = mean(value))
