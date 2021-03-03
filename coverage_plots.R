@@ -156,18 +156,21 @@ df_temp <- df_temp %>%
 df <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk_noUS.csv", add_baseline = TRUE, 
                      remove_revisions=TRUE, add_truth=TRUE)
 
+df <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_all_ws4_is.csv", add_baseline = FALSE, 
+                     remove_revisions=TRUE, add_truth=TRUE)
+
 plot_coverage <- function(df, width=0.05, breaks){
   if(!missing(breaks)){
     df <- subset(df, quantile %in% round(breaks, 3))
   }
   
   df$model <- factor(df$model, levels = c('EWA', 'MED', 'INV', 'V2', 'V3', 'V4',
-                                          'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4',
+                                          'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4', 'QNA3', 'INVA',
                                           "CovidAnalytics-DELPHI", "CU-select", "JHU_IDD-CovidSP", 
                                           "LANL-GrowthRate", "MOBS-GLEAM_COVID", "PSI-DRAFT", "UCLA-SuEIR", 
                                           "UMass-MechBayes", "YYG-ParamSearch", "Baseline"),
                      labels = c("EWA", "MED", "INV", "V[2]", "V[3]", "V[4]", 
-                                "GQRA[2]", "GQRA[3]", "GQRA[4]", "QRA[2]", "QRA[3]", "QRA[4]", 
+                                "GQRA[2]", "GQRA[3]", "GQRA[4]", "QRA[2]", "QRA[3]", "QRA[4]", "QNA[3]", "INVA",
                                 "DELPHI", "CU", "JHU_IDD", 
                                 "LANL", "MOBS", "PSI", "UCLA", 
                                 "UMass", "YYG", 'Baseline'))
@@ -191,11 +194,14 @@ plot_coverage <- function(df, width=0.05, breaks){
     ylab('')
 }
 
-plot_coverage(subset(df, location!='US' & window_size==4), breaks=seq(0, 1, 0.1))
+plot_coverage(subset(df, location!='US' & window_size==4), breaks=seq(0, 1, 0.1), width=0.03)
 
 plot_coverage(subset(df, location!='US' & window_size==4), width=0.02)
 
 ggsave('plots/coverage_ensembles_23.png', width=20, height=24, dpi=500, unit='cm', device='png')
+
+ggsave('plots/coverage_ensembles_inSample_23.png', width=20, height=24, dpi=500, unit='cm', device='png')
+
 
 
 
