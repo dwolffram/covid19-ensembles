@@ -75,8 +75,14 @@ inva_fit <- function(df){
 
 ### Vincentization
 # V3 and V4 together
-V3 <- function(df, params, intercept=0){
-  params <- data.frame(model=sort(unique(df$model)), param=params)
+V3 <- function(df, params, intercept=0, models){
+  if(missing(models)){
+    params <- data.frame(model=sort(unique(df$model)), param=params)
+  }
+  else{
+    params <- data.frame(model=models, param=params)
+  }
+  
   df_temp <- merge(df, params, by.x = "model", by.y = "model")
   v3 <- df_temp %>%
     mutate(weighted_values = value * param) %>%
