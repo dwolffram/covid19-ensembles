@@ -162,8 +162,9 @@ load_forecasts <- function(models, exclude_locations=c(), targets=paste(1:4, "wk
 
 
 load_ensembles <- function(filename, add_truth=FALSE, add_baseline=FALSE,
-                           remove_revisions=FALSE, add_location_names=TRUE){
-  df <- read_csv(filename, 
+                           remove_revisions=FALSE, add_location_names=TRUE, in_sample=FALSE){
+  if (!in_sample){
+    df <- read_csv(filename, 
                  col_types = cols_only(
                    target = col_character(),
                    target_end_date = col_date(format = ""),
@@ -172,9 +173,26 @@ load_ensembles <- function(filename, add_truth=FALSE, add_baseline=FALSE,
                    value = col_double(),
                    window_size = col_factor(c("1", "2", "3","4")),
                    model = col_factor(c('EWA', 'MED', 'INV', 'INVA', 'V2', 'V3', 'V4', 'GQRA2', 
-                                        'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4', 'QNA3')),
-                   id_date = col_date(format = ""))
+                                        'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4', 'QNA3'))
+                   )
   ) %>% as.data.frame()
+  }
+  else{
+    df <- read_csv(filename, 
+                   col_types = cols_only(
+                     target = col_character(),
+                     target_end_date = col_date(format = ""),
+                     location = col_character(),
+                     quantile = col_double(),
+                     value = col_double(),
+                     window_size = col_factor(c("1", "2", "3","4")),
+                     model = col_factor(c('EWA', 'MED', 'INV', 'INVA', 'V2', 'V3', 'V4', 'GQRA2', 
+                                          'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4', 'QNA3')),
+                     id_date = col_date(format = "")
+                     )
+    ) %>% as.data.frame()
+  }
+  
   
   if(add_baseline){
     df_baseline <- load_forecasts(models = c("COVIDhub-baseline"), targets = unique(df$target),

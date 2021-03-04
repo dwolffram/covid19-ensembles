@@ -157,6 +157,9 @@ df <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk_noUS.csv", add_ba
                      remove_revisions=TRUE, add_truth=TRUE)
 
 df <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_all_ws4_is.csv", add_baseline = FALSE, 
+                     remove_revisions=TRUE, add_truth=TRUE, in_sample=TRUE)
+
+df <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_all_ws4_oos.csv", add_baseline = FALSE, 
                      remove_revisions=TRUE, add_truth=TRUE)
 
 plot_coverage <- function(df, width=0.05, breaks){
@@ -184,24 +187,34 @@ plot_coverage <- function(df, width=0.05, breaks){
   
   ggplot(df_temp) +
     facet_wrap('model', ncol=3, labeller = label_parsed) +
-    geom_segment(aes(x=0,xend=1,y=0,yend=1), linetype="dashed", colour="grey70")+
+    geom_segment(aes(x=0,xend=1,y=0,yend=1), colour="grey70")+
     geom_errorbar(aes(x=quantile, ymin=l, ymax=u), width=width, size=0.5,
                   data=df_temp, colour="black") +
+    # geom_linerange(aes(x=quantile, ymin = u, ymax = quantile), colour=viridis(3)[3]) +
+    # geom_linerange(aes(x=quantile, ymin = quantile, ymax = l), colour=viridis(3)[1]) +
     scale_x_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
                        labels = function(x) ifelse(x == 0, "0", x)) +
     scale_y_continuous(labels = function(y) ifelse(y == 0, "0", y)) +
     xlab('Quantile') +
-    ylab('')
+    ylab('') +
+    theme_gray(base_size=12)
 }
 
-plot_coverage(subset(df, location!='US' & window_size==4), breaks=seq(0, 1, 0.1), width=0.03)
+plot_coverage(subset(df, location!='US' & window_size==4), breaks=seq(0, 1, 0.1), width=0.03) + ggtitle('In-sample')
+plot_coverage(subset(df, location!='US' & window_size==4), breaks=seq(0, 1, 0.1), width=0.03) + ggtitle('Out-of-sample')
 
-plot_coverage(subset(df, location!='US' & window_size==4), width=0.02)
 
-ggsave('plots/coverage_ensembles_23.png', width=20, height=24, dpi=500, unit='cm', device='png')
+plot_coverage(subset(df, location!='US' & window_size==4), width=0.02) + ggtitle('In-sample')
+plot_coverage(subset(df, location!='US' & window_size==4), width=0.02) + ggtitle('Out-of-sample')
 
+
+ggsave('plots/coverage_ensembles_10.png', width=20, height=24, dpi=500, unit='cm', device='png')
+
+ggsave('plots/coverage_ensembles_outOfSample_10.png', width=20, height=24, dpi=500, unit='cm', device='png')
+ggsave('plots/coverage_ensembles_outOfSample_23.png', width=20, height=24, dpi=500, unit='cm', device='png')
+
+ggsave('plots/coverage_ensembles_inSample_10.png', width=20, height=24, dpi=500, unit='cm', device='png')
 ggsave('plots/coverage_ensembles_inSample_23.png', width=20, height=24, dpi=500, unit='cm', device='png')
-
 
 
 
