@@ -157,10 +157,49 @@ df <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk_noUS.csv", add_ba
                      remove_revisions=TRUE, add_truth=TRUE)
 
 df <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_all_ws4_is.csv", add_baseline = FALSE, 
-                     remove_revisions=TRUE, add_truth=TRUE, in_sample=TRUE)
+                     remove_revisions=TRUE, add_truth=FALSE, in_sample=TRUE)
+
+df <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_all_ws4_is.csv", add_baseline = FALSE, 
+                     remove_revisions=FALSE, add_truth=FALSE, in_sample=TRUE)
 
 df <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_all_ws4_oos.csv", add_baseline = FALSE, 
                      remove_revisions=TRUE, add_truth=TRUE)
+
+df <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_qra4_ws4_inSample_unsorted.csv", 
+                     add_baseline=FALSE, remove_revisions=FALSE, add_truth=TRUE, in_sample=TRUE)
+
+df <- df %>% 
+  group_by(id_date) %>%
+  mutate(forecast_date = max(target_end_date) + 2)
+
+df %>% 
+  group_by(id_date) %>%
+  group_modify(.f=add_truth, as_of=forecast_date)
+
+df <- df %>%
+  select(-truth)
+
+dfs = data.frame()
+
+df$id_date <- as.Date(df$id_date)
+
+
+for(d in as.list(unique(df$id_date))){
+  print(d)
+  temp <- subset(df, id_date==d)
+  print('add truth')
+  print(format(d, "%Y-%m-%d"))
+  temp <- add_truth(temp, as_of=temp$forecast_date[1])
+  dfs <- bind_rows(dfs, temp)
+}
+
+dfs$target_end_date <- paste0(dfs$target_end_date, '_', dfs$id_date)
+
+ensemble_scores <- score_forecasts(dfs)
+ensemble_scores <- ensemble_scores %>%
+  select(-forecast_date)
+write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4_is_new2.csv", row.names=FALSE)
+
 
 plot_coverage <- function(df, width=0.05, breaks){
   if(!missing(breaks)){
@@ -204,7 +243,7 @@ plot_coverage(subset(df, location!='US' & window_size==4), breaks=seq(0, 1, 0.1)
 plot_coverage(subset(df, location!='US' & window_size==4), breaks=seq(0, 1, 0.1), width=0.03) + ggtitle('Out-of-sample')
 
 
-plot_coverage(subset(df, location!='US' & window_size==4), width=0.02) + ggtitle('In-sample')
+plot_coverage(subset(dfs, location!='US' & window_size==4), width=0.02) + ggtitle('In-sample')
 plot_coverage(subset(df, location!='US' & window_size==4), width=0.02) + ggtitle('Out-of-sample')
 
 
@@ -216,6 +255,16 @@ ggsave('plots/coverage_ensembles_outOfSample_23.png', width=20, height=24, dpi=5
 ggsave('plots/coverage_ensembles_inSample_10.png', width=20, height=24, dpi=500, unit='cm', device='png')
 ggsave('plots/coverage_ensembles_inSample_23.png', width=20, height=24, dpi=500, unit='cm', device='png')
 
+
+df_temp <- dfs
+df_temp$l <- df_temp$truth < floor(df_temp$value)
+df_temp$u <- df_temp$truth <= floor(df_temp$value)
+
+df_temp <- df_temp %>%
+  group_by(model, quantile) %>%
+  summarize(l = mean(l), u=mean(u))
+
+df_temp2 <- df_temp
 
 
 

@@ -410,7 +410,7 @@ df_ensembles <- add_truth(df_ensembles)
 ensemble_scores <- score_forecasts(df_ensembles)
 write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4_oos.csv", row.names=FALSE)
 
-df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4_is.csv", 
+df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4_is_new2.csv", 
                   remove_revisions=TRUE, long_format=TRUE, in_sample=TRUE)
 
 df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4_oos.csv", 
@@ -444,7 +444,7 @@ ggplot(subset(df, location != 'US' & window_size==4 & score %in% c("wgt_pen_l", 
   scale_x_discrete(labels = function(l) parse(text=l)) + 
   labs(x = NULL,
        y = "Mean WIS") +
-  ggtitle("Out-of-sample performance")
+  ggtitle("In-sample performance")
 
 ggsave('plots/evaluation_study/mean_wis_1wk_ensembles_outOfSample.png', width=20, height=15, dpi=500, unit='cm', device='png')
 

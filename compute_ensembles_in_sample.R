@@ -36,20 +36,50 @@ registerDoParallel(cores=no_cores)
 
 ensembles <- c("EWA", "MED", "INV", "INVA", "V2", "V3", "V4", "QRA2", "QRA3", 
                "QRA4", "GQRA2", "GQRA3", "GQRA4", "QNA3")
+ensembles <- c("QRA4")
+ensembles <- c("EWA", "V3", "V4", "QRA3", 
+               "QRA4", "GQRA3", "QNA3")
 window_sizes <- 4
 
 df_ensembles <- ensemble_forecasts(df, window_sizes=window_sizes, ensembles=ensembles, 
-                                   exclude_us_from_training=TRUE, in_sample=TRUE)
+                                   exclude_us_from_training=TRUE, in_sample=TRUE, sort_crossings=FALSE)
 
-file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_all_ws4_inSample_", Sys.Date(), ".csv")
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_ws4_inSample_unsorted_order", Sys.Date(), ".csv")
 write.csv(df_ensembles, file_name, row.names=FALSE)
+
+a = df_ensembles[[1]]
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_qra4_ws4_oos_unsorted_", Sys.Date(), ".csv")
+write.csv(a, file_name, row.names=FALSE)
+
+b = df_ensembles[[2]]
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_qra4_ws4_inSample_unsorted2_", Sys.Date(), ".csv")
+write.csv(b, file_name, row.names=FALSE)
+
+
+
+plot_coverage(subset(df_ensembles[[2]], location!='US' & window_size==4), width=0.02) + ggtitle('In-sample')
+
+
+df2 <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_qra4_ws4_inSample_unsorted2.csv", 
+                     add_baseline=FALSE, remove_revisions=TRUE, add_truth=TRUE, in_sample=TRUE)
+
+df_temp <- df_ensembles[[2]]
+df_temp$l <- df_temp$truth < floor(df_temp$value)
+df_temp$u <- df_temp$truth <= floor(df_temp$value)
+
+df_temp <- df_temp %>%
+  group_by(model, quantile) %>%
+  summarize(l = mean(l), u=mean(u))
+
+df_temp3 <- df_temp
 
 comb <- function(x){
   lapply(transpose(x), function(l) do.call(rbind, l))
 }
 
 ensemble_forecasts <- function(df, dates, window_sizes, ensembles=c("EWA"), 
-                               exclude_us_from_training=FALSE, n_models='all', in_sample=FALSE){
+                               exclude_us_from_training=FALSE, n_models='all', in_sample=FALSE,
+                               sort_crossings=TRUE){
   
   horizon <- as.numeric(substr(unique(df$target), 1, 1)) # first character of target is the horizon
   
@@ -84,7 +114,7 @@ ensemble_forecasts <- function(df, dates, window_sizes, ensembles=c("EWA"),
           
           df_test <- dfs$df_test
           
-          results <- build_ensembles(df_train, df_test, ensembles, n_models, in_sample)
+          results <- build_ensembles(df_train, df_test, ensembles, n_models, in_sample, sort_crossings)
           df_forecasts <- results[[1]]
           df_fit <- results[[2]]
           df_forecasts$window_size <- window_size
@@ -122,7 +152,7 @@ build_ensembles <- function(df_train, df_test,
                             ensembles=c("EWA", "MED", "INV", "INVA", "V2", "V3", "V4", 
                                         "QRA2", "QRA3", "QRA4", 
                                         "GQRA2", "GQRA3", "GQRA4", "QNA3"),
-                            n_models='all', in_sample=FALSE){
+                            n_models='all', in_sample=FALSE, sort_crossings=TRUE){
   
   if(n_models != 'all'){
     # only use best n_models models for ensembles
@@ -213,11 +243,16 @@ build_ensembles <- function(df_train, df_test,
               if (in_sample) df_fit <- QNA3(df_train, p$params, p$intercepts)
             }
     )
-    df_forecast <- sort_quantiles(df_forecast)
+    
+    if(sort_crossings){
+      print("Sorting...")
+      df_forecast <- sort_quantiles(df_forecast)
+      df_fit <- sort_quantiles(df_fit)
+    }
+    
     df_forecast$model <- ensemble
     df_ensembles <- bind_rows(df_ensembles, df_forecast)
     
-    df_fit <- sort_quantiles(df_fit)
     df_fit$model <- ensemble
     df_fit$id_date <- min(df_train$target_end_date)
     df_in_sample <- bind_rows(df_in_sample, df_fit)
