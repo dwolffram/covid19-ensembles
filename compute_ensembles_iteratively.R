@@ -18,7 +18,7 @@ df <- load_forecasts(models=models, targets=c("1 wk ahead cum death"),
                      exclude_locations=exclude_locations, start_date="2020-08-01", end_date="2021-02-06", 
                      intersect_dates=TRUE)
 
-write.csv(df, "data/individual_models/df_evaluation_study.csv", row.names=FALSE)
+# write.csv(df, "data/individual_models/df_evaluation_study.csv", row.names=FALSE)
 
 
 length(unique(df$target_end_date))
@@ -42,6 +42,44 @@ dfs <- train_test_split(df, test_date=as.Date("2020-08-22"), horizon=1, window_s
 df_train <- dfs$df_train
 df_test <- dfs$df_test
 
+### V3
+
+V3 <- function(df, params, intercept=0, models){
+  if(missing(models)){
+    params <- data.frame(model=sort(unique(df$model)), param=params)
+  }
+  else{
+    params <- data.frame(model=models, param=params)
+  }
+  
+  df_temp <- merge(df, params, by.x = "model", by.y = "model")
+  v3 <- df_temp %>%
+    mutate(weighted_values = value * param) %>%
+    group_by(target_end_date, location, target, quantile, truth) %>% 
+    summarize(value = sum(weighted_values) + intercept) %>%
+    as.data.frame()
+  return(v3)
+}
+
+v3_loss <- function(df, params, intercept=0, models){
+  df_temp <- V3(df, params, intercept, models)
+  return(mean_wis(df_temp))
+}
+
+v3_fit <- function(df, models, method="BFGS"){
+  if(missing(models)){
+    models <- sort(unique(df$model))
+  }
+  
+  n_models = length(models)
+  
+  p_optim <- optim(par = rep(1/n_models, n_models), 
+                   fn = function(x){
+                     return(v3_loss(df, params = x, intercept = 0, models))},
+                   method = method)$par
+  return(p_optim)
+}
+
 
 ### Iterative training
 
@@ -56,6 +94,7 @@ df_test <- subset(df_test, location != 'US')
 v3-iter_fit <- function(df_train){
   
 }
+
 scores <- wis(df_train)
 
 scores %>%
@@ -75,7 +114,7 @@ models_ranked <- scores %>%
 
 df_iter <- subset(df_train, model %in% models_ranked[1:2])
 
-p <- v3_fit(df_iter)
+p <- v3_fit(df_iter, models=models_ranked[1:2])
 df_iter <- V3(df_iter, params=p, models=models_ranked[1:2])
 df_iter$model <- 'F'
 weights <- p
@@ -84,7 +123,7 @@ for (m in models_ranked[-1:-2]){
   print(m)
   df_iter <- bind_rows(df_iter, subset(df_train, model == m))
   print(unique(df_iter$model))
-  p <- v3_fit(df_iter)
+  p <- v3_fit(df_iter, models=c("F", m))
   print(p)
   df_iter <- V3(df_iter, params=p, models=c("F", m))
   df_iter$model <- 'F'
@@ -94,16 +133,20 @@ for (m in models_ranked[-1:-2]){
 
 
 p3 <- v3_fit(df_train)
+
 df_v3 <- V3(df_test, params=p3)
 mean_wis(df_v3)
 
-df_v3 <- V3(df_test, params=weights, models=models_ranked)
-mean_wis(df_v3)
+df_it <- V3(df_test, params=weights, models=models_ranked)
+mean_wis(df_it)
 
 df_v3 <- V3(df_train, params=p3)
 mean_wis(df_v3)
 
-df_v3 <- V3(df_train, params=weights, models=models_ranked)
-mean_wis(df_v3)
+df_it <- V3(df_train, params=weights, models=models_ranked)
+mean_wis(df_it)
 
 a <- data.frame(model=models_ranked, param=weights)
+
+
+
