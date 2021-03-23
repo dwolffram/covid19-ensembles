@@ -173,7 +173,7 @@ load_ensembles <- function(filename, add_truth=FALSE, add_baseline=FALSE,
                    value = col_double(),
                    window_size = col_factor(c("1", "2", "3","4")),
                    model = col_factor(c('EWA', 'MED', 'INV', 'INVA', 'V2', 'V3', 'V4', 'GQRA2', 
-                                        'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4', 'QNA3'))
+                                        'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4', 'QNA3', 'V3_iter'))
                    )
   ) %>% as.data.frame()
   }
@@ -187,7 +187,7 @@ load_ensembles <- function(filename, add_truth=FALSE, add_baseline=FALSE,
                      value = col_double(),
                      window_size = col_factor(c("1", "2", "3","4")),
                      model = col_factor(c('EWA', 'MED', 'INV', 'INVA', 'V2', 'V3', 'V4', 'GQRA2', 
-                                          'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4', 'QNA3')),
+                                          'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4', 'QNA3', 'V3_iter')),
                      id_date = col_date(format = "")
                      )
     ) %>% as.data.frame()
@@ -209,7 +209,7 @@ load_ensembles <- function(filename, add_truth=FALSE, add_baseline=FALSE,
     df <- bind_rows(df, df_baseline)
     df$model <- fct_relevel(df$model, c('EWA', 'MED', 'INV', 'INVA', 'V2', 'V3', 'V4', 
                                         'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4', 
-                                        'QNA3', 'Baseline'))
+                                        'QNA3', 'V3_iter', 'Baseline'))
   }
 
   if(remove_revisions){
@@ -276,7 +276,7 @@ load_scores <- function(filename, scores=c('ae', 'wis', 'wis_decomposition'),
   # fix order of ensemble model names
   if(str_detect(filename, 'ensemble')){
     df$model <- factor(df$model, levels=intersect(c('EWA', 'MED', 'INV', 'INVA', 'V2', 'V3', 'V4', 
-                                                    'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4', 'QNA3',
+                                                    'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4', 'QNA3', 'V3_iter',
                                                     'Baseline', 'COVIDhub-ensemble'),
                                                   unique(df$model)))
   }

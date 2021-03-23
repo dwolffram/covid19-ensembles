@@ -186,6 +186,10 @@ build_ensembles <- function(df_train, df_test,
             "QNA3" = {
               p <- qna3_fit(df_train)
               df_forecast <- QNA3(df_test, p$params, p$intercepts)
+            },
+            "V3_iter" = {
+              p <- v3_iter_fit(df_train)
+              df_forecast <- V3(df_test, params=p$params, models=p$models)
             }
     )
     df_forecast <- sort_quantiles(df_forecast)

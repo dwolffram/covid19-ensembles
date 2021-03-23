@@ -42,45 +42,6 @@ dfs <- train_test_split(df, test_date=as.Date("2020-08-22"), horizon=1, window_s
 df_train <- dfs$df_train
 df_test <- dfs$df_test
 
-### V3
-
-V3 <- function(df, params, intercept=0, models){
-  if(missing(models)){
-    params <- data.frame(model=sort(unique(df$model)), param=params)
-  }
-  else{
-    params <- data.frame(model=models, param=params)
-  }
-  
-  df_temp <- merge(df, params, by.x = "model", by.y = "model")
-  v3 <- df_temp %>%
-    mutate(weighted_values = value * param) %>%
-    group_by(target_end_date, location, target, quantile, truth) %>% 
-    summarize(value = sum(weighted_values) + intercept) %>%
-    as.data.frame()
-  return(v3)
-}
-
-v3_loss <- function(df, params, intercept=0, models){
-  df_temp <- V3(df, params, intercept, models)
-  return(mean_wis(df_temp))
-}
-
-v3_fit <- function(df, models, method="BFGS"){
-  if(missing(models)){
-    models <- sort(unique(df$model))
-  }
-  
-  n_models = length(models)
-  
-  p_optim <- optim(par = rep(1/n_models, n_models), 
-                   fn = function(x){
-                     return(v3_loss(df, params = x, intercept = 0, models))},
-                   method = method)$par
-  return(p_optim)
-}
-
-
 ### Iterative training
 
 dfs <- train_test_split(df, test_date=as.Date("2020-09-12"), horizon=1, window_size=4)
@@ -91,8 +52,34 @@ df_train <- subset(df_train, location != 'US')
 df_test <- subset(df_test, location != 'US')
 
 
-v3-iter_fit <- function(df_train){
+v3_iter_fit <- function(df_train){
+  scores <- wis(df_train)
   
+  models_ranked <- scores %>%
+    group_by(model) %>%
+    summarize(meanWIS = mean(wis)) %>%
+    arrange(meanWIS) %>%
+    pull(model)
+  
+  df_iter <- subset(df_train, model %in% models_ranked[1:2])
+  
+  p <- v3_fit(df_iter, models=models_ranked[1:2])
+  df_iter <- V3(df_iter, params=p, models=models_ranked[1:2])
+  df_iter$model <- 'F'
+  weights <- p
+  
+  for (m in models_ranked[-1:-2]){
+    df_iter <- bind_rows(df_iter, subset(df_train, model == m))
+    #print(unique(df_iter$model))
+    p <- v3_fit(df_iter, models=c("F", m))
+    #print(p)
+    df_iter <- V3(df_iter, params=p, models=c("F", m))
+    df_iter$model <- 'F'
+    
+    weights <- c(p[1]*weights, p[2])
+  }
+  
+  return(list(models=models_ranked, params=weights))
 }
 
 scores <- wis(df_train)
@@ -148,5 +135,49 @@ mean_wis(df_it)
 
 a <- data.frame(model=models_ranked, param=weights)
 
+w <- v3_iter_fit(df_train)
+w[["models"]]
+w[["params"]]
+weights
+
+df_it <- V3(df_train, params=w$params, models=w$models)
+mean_wis(df_it)
+
+df_ensembles <- ensemble_forecasts(df, window_sizes=4, ensembles="V3_iter", exclude_us_from_training=TRUE)
+
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_ws4_v3-iter.csv")
+write.csv(df_ensembles, file_name, row.names=FALSE)
+
+# compute scores
+
+df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_ws4_v3-iter.csv", 
+                               add_baseline = FALSE)
+ensemble_scores <- score_forecasts(df_ensembles)
+write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_V3_iter_ws4.csv", row.names=FALSE)
+
+# combine scores
+
+df1 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4_oos.csv", remove_revisions=TRUE, long_format=TRUE)
+df2 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_V3_iter_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
+df <- bind_rows(df1, df2)
+
+ggplot(subset(df, location != 'US' & window_size==4 & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
+       aes(x=reorder(model, value), y=value,
+           fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
+  theme_gray(base_size=14) +
+  theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1), 
+        legend.position = "right") +
+  scale_fill_viridis(discrete=TRUE, name = NULL,
+                     labels = c("Overprediction", "Dispersion", "Underprediction"))+
+  #scale_x_discrete(labels = function(l) parse(text=l)) + 
+  labs(x = NULL,
+       y = "Mean WIS")
+
+ggsave('plots/evaluation_study/mean_wis_1wk_v3-iter.png', width=20, height=15, dpi=500, unit='cm', device='png')
 
 
+s <- df %>%
+  filter(score=='wis' & location != 'US') %>%
+  group_by(model) %>%
+  summarize(meanWIS = mean(value))
