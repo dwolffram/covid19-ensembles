@@ -163,3 +163,13 @@ write.csv(df_ensembles, file_name, row.names=FALSE)
 df1 <- subset(df_ensembles, window_size==4)
 file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_top3_ws4.csv")
 write.csv(df1, file_name, row.names=FALSE)
+
+# 5 models ws 1-4
+ensembles <- c("EWA", "MED", "INV", "INVA", "V2", "V3", "V4", "QRA2", "QRA3", 
+               "QRA4", "GQRA2", "GQRA3", "GQRA4", "QNA3")
+
+df_ensembles <- ensemble_forecasts(df, window_sizes=1:4, ensembles=ensembles,
+                                   exclude_us_from_training=TRUE, n_models = 5)
+
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_top5_ws1234_", Sys.Date(), ".csv")
+write.csv(df_ensembles, file_name, row.names=FALSE)

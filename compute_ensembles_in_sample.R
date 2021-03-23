@@ -48,11 +48,11 @@ file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_n
 write.csv(df_ensembles, file_name, row.names=FALSE)
 
 a = df_ensembles[[1]]
-file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_qra4_ws4_oos_unsorted_", Sys.Date(), ".csv")
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_ws4_oos_unsorted_", Sys.Date(), ".csv")
 write.csv(a, file_name, row.names=FALSE)
 
 b = df_ensembles[[2]]
-file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_qra4_ws4_inSample_unsorted2_", Sys.Date(), ".csv")
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_ws4_inSample_unsorted_", Sys.Date(), ".csv")
 write.csv(b, file_name, row.names=FALSE)
 
 
@@ -305,67 +305,3 @@ so %>% group_by(model) %>% summarize(wis = mean(wis))
 
 unique(df$target_end_date)
 
-### Iterative training
-
-dfs <- train_test_split(df, test_date=as.Date("2020-09-12"), horizon=1, window_size=4)
-df_train <- dfs$df_train
-df_test <- dfs$df_test
-
-df_train <- subset(df_train, location != 'US')
-df_test <- subset(df_test, location != 'US')
-
-
-v3-iter_fit <- function(df_train){
-  
-}
-scores <- wis(df_train)
-
-scores %>%
-  group_by(model) %>%
-  summarize(meanWIS = mean(wis))
-
-a <- df_train %>%
-  select(-c(location_name, type, forecast_date))
-s <- wis(a)
-
-models_ranked <- scores %>%
-  group_by(model) %>%
-  summarize(meanWIS = mean(wis)) %>%
-  arrange(meanWIS) %>%
-  pull(model)
-
-
-df_iter <- subset(df_train, model %in% models_ranked[1:2])
-
-p <- v3_fit(df_iter)
-df_iter <- V3(df_iter, params=p, models=models_ranked[1:2])
-df_iter$model <- 'F'
-weights <- p
-
-for (m in models_ranked[-1:-2]){
-  print(m)
-  df_iter <- bind_rows(df_iter, subset(df_train, model == m))
-  print(unique(df_iter$model))
-  p <- v3_fit(df_iter)
-  print(p)
-  df_iter <- V3(df_iter, params=p, models=c("F", m))
-  df_iter$model <- 'F'
-  
-  weights <- c(p[1]*weights, p[2])
-}
-
-
-p3 <- v3_fit(df_train)
-df_v3 <- V3(df_test, params=p3)
-mean_wis(df_v3)
-
-df_v3 <- V3(df_test, params=weights, models=models_ranked)
-mean_wis(df_v3)
-
-df_v3 <- V3(df_train, params=p3)
-mean_wis(df_v3)
-
-df_v3 <- V3(df_train, params=weights, models=models_ranked)
-mean_wis(df_v3)
-
-a <- data.frame(model=models_ranked, param=weights)

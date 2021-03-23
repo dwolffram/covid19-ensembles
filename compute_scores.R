@@ -288,9 +288,19 @@ df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ense
 ensemble_scores <- score_forecasts(df_ensembles)
 write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_top3_ws4.csv", row.names=FALSE)
 
-df3 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_top3_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
+df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_top5_ws1234.csv", 
+                               add_baseline = TRUE)
+ensemble_scores <- score_forecasts(df_ensembles)
+write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_top5.csv", row.names=FALSE)
 
-ggplot(subset(df3, location !='US' & window_size==4 & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
+df3 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_top3_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
+df5 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_top5.csv", remove_revisions=TRUE, long_format=TRUE)
+
+
+plot_wis(df5, locations='states', x=window_size, facet=model, 
+         ncol=3, hjust=0.5, dir='h', title=NULL)
+
+ggplot(subset(df5, location !='US' & window_size==4 & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
        aes(x=reorder(model, value), y=value,
            fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
   geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
@@ -303,21 +313,41 @@ ggplot(subset(df3, location !='US' & window_size==4 & score %in% c("wgt_pen_l", 
   labs(x = NULL,
        y = "Mean WIS")
 
+
+a <- subset(df3, location !='US' & window_size==4 & score=='wis') %>%
+  group_by(target_end_date, model) %>%
+  summarize(wis=mean(value))
+
+ggplot(a, 
+       aes(x=target_end_date, y=wis,
+           colour=model)) +
+  geom_line() +
+  theme_gray(base_size=10) +
+  theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1), 
+        legend.position = "right") +
+  #scale_x_discrete(labels = function(l) parse(text=l)) + 
+  labs(x = NULL,
+       y = "Mean WIS")
+
+
 df1 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
-df1 <- load_scores("scores/evaluation_study/", remove_revisions=TRUE, long_format=TRUE)
 
 df2 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_KarOlUM.csv", remove_revisions=TRUE, long_format=TRUE)
 df2$model <- paste0(df2$model, '-3')
 
 df3$model <- paste0(df3$model, '-3F')
+df5$model <- paste0(df5$model, '-5F')
 
 df_all <- bind_rows(df1, df2, df3)
+df_all <- bind_rows(df5, df3)
+
+
 
 ggplot(subset(df_all, location != 'US' & window_size==4 & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
        aes(x=reorder(model, value), y=value,
            fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
   geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
-  theme_gray(base_size=10) +
+  theme_gray(base_size=14) +
   theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1), 
         legend.position = "right") +
   scale_fill_viridis(discrete=TRUE, name = NULL,
@@ -325,6 +355,9 @@ ggplot(subset(df_all, location != 'US' & window_size==4 & score %in% c("wgt_pen_
   #scale_x_discrete(labels = function(l) parse(text=l)) + 
   labs(x = NULL,
        y = "Mean WIS")
+
+ggsave('plots/evaluation_study/mean_wis_1wk_3F-5F.png', width=20, height=15, dpi=500, unit='cm', device='png')
+
 
 df_all <- bind_rows(df1, df3)
 
@@ -369,9 +402,32 @@ df_individual <- load_forecasts(models = c("COVIDhub-ensemble"),
 
 individual_scores <- score_forecasts(df_individual)
 
+df_individual <- subset(df, target_end_date >= '2020-08-29')
+individual_scores <- score_forecasts(df_individual)
+
+individual_scores  <- individual_scores %>% 
+  select(-c(forecast_date, type)) %>%
+  select(target_end_date, everything())
+
+write.csv(individual_scores, "scores/evaluation_study/individual_scores_1wk.csv", row.names=FALSE)
+
 write.csv(individual_scores, "scores/evaluation_study/COVIDhub-ensemble_scores_1wk.csv", row.names=FALSE)
 
 individual_scores <- load_scores("scores/evaluation_study/COVIDhub-ensemble_scores_1wk.csv", remove_revisions=TRUE, long_format=TRUE)
+individual_scores <- load_scores("scores/evaluation_study/individual_scores_1wk.csv", remove_revisions=TRUE, long_format=TRUE)
+
+ggplot(subset(individual_scores, location != 'US' & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
+       aes(x=reorder(model, value), y=value,
+           fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
+  geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
+  theme_gray(base_size=12) +
+  theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1), 
+        legend.position = "right") +
+  scale_fill_viridis(discrete=TRUE, name = NULL,
+                     labels = c("Overprediction", "Dispersion", "Underprediction"))+
+  #scale_x_discrete(labels = function(l) parse(text=l)) + 
+  labs(x = NULL,
+       y = "Mean WIS")
 
 individual_scores$window_size = '4'
 df_all <- bind_rows(df_all, individual_scores)
@@ -410,8 +466,11 @@ df_ensembles <- add_truth(df_ensembles)
 ensemble_scores <- score_forecasts(df_ensembles)
 write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4_oos.csv", row.names=FALSE)
 
+df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4_is_unsorted_new2.csv", 
+                  remove_revisions=FALSE, long_format=TRUE, in_sample=TRUE)
+
 df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4_is_new2.csv", 
-                  remove_revisions=TRUE, long_format=TRUE, in_sample=TRUE)
+                  remove_revisions=FALSE, long_format=TRUE, in_sample=TRUE)
 
 df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4_oos.csv", 
                   remove_revisions=TRUE, long_format=TRUE, in_sample=FALSE)
@@ -444,12 +503,32 @@ ggplot(subset(df, location != 'US' & window_size==4 & score %in% c("wgt_pen_l", 
   scale_x_discrete(labels = function(l) parse(text=l)) + 
   labs(x = NULL,
        y = "Mean WIS") +
-  ggtitle("In-sample performance")
+  ggtitle("In-sample performance (unsorted)")
 
-ggsave('plots/evaluation_study/mean_wis_1wk_ensembles_outOfSample.png', width=20, height=15, dpi=500, unit='cm', device='png')
+ggsave('plots/evaluation_study/mean_wis_1wk_ensembles_inSample_unsorted.png', width=20, height=15, dpi=500, unit='cm', device='png')
 
 
 scores <- df %>%
   filter(location != 'US' & window_size==4 & score == 'wis') %>%
   group_by(model) %>%
   summarize(mean_wis = mean(value))
+
+View(subset(scores, model %in% c('V3_3F', 'GQRA2', 'EWA_3F', 'EWA', 'COVIDhub-ensemble', 'COVIDhub-baseline')))
+
+scores2 <- scores
+
+s3 <- ensemble_scores %>%
+  group_by(model) %>%
+  summarize(mean(wis))
+
+
+####
+
+e <- subset(ensemble_scores, model %in% c("V4", "QNA3"))
+e <- e %>%
+  select(c(target_end_date, location, model, wis))
+
+e <- pivot_wider(e, id_cols=c(target_end_date, location), names_from=model, values_from=wis)
+
+f <- e %>%
+  filter(QNA3 > V4)

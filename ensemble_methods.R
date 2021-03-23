@@ -550,7 +550,7 @@ gqra2_fit <- function(df, groups){
 
 ### QNA
 
-# params: data.frame with columns: model, quantile, param
+# params: data.frame with columns: model, param
 # intercepts: data.frame with columns: quantile, intercept
 QNA3 <- function(df, params, intercepts){
   df_temp <- merge(df, params, by = "model")

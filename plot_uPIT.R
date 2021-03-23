@@ -72,7 +72,7 @@ df <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk_noUS.csv", add_ba
 df <- load_ensembles("data/ensemble_forecasts/df_ensembles_1wk.csv", add_baseline = TRUE, 
                      remove_revisions=TRUE, add_truth=TRUE)
 
-df <- load_ensembles("data/ensemble_forecasts/df_ensembles_4wk_noUS.csv", add_baseline = TRUE, 
+df <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_top3_ws4.csv", add_baseline = TRUE, 
                      remove_revisions=TRUE, add_truth=TRUE)
 
 b <- subset(df, location!='US' & model=='EWA' & window_size==4)

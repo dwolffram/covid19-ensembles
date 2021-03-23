@@ -50,12 +50,13 @@ scores <- df_all %>%
   group_by(model) %>%
   summarize(mean_wis = mean(value))
 
+df_a <- subset(df_all, !model %in% c('INVA_3F', 'INVA', 'INV_3F', 'INV', 'QNA3'))
 
-ggplot(subset(df_all, type!='Individual Model' & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
+ggplot(subset(df_a, type!='Individual Model' & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
        aes(x=reorder(model, value), y=value,
            fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
   geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
-  theme_gray(base_size=10) +
+  theme_gray(base_size=14) +
   theme(axis.text.x=element_text(vjust=0.5, angle=90, hjust=1), 
         legend.position = "right") +
   scale_fill_viridis(discrete=TRUE, name = NULL,
@@ -64,7 +65,17 @@ ggplot(subset(df_all, type!='Individual Model' & score %in% c("wgt_pen_l", "wgt_
   labs(x = NULL,
        y = "Mean WIS")
 
+ggsave('plots/evaluation_study/mean_wis_3F.png', width=20, height=15, dpi=500, unit='cm', device='png')
 
+
+unique(df_all$model)
+
+s <- subset(scores, !model %in% c('INVA_3F', 'INVA', 'INV_3F', 'INV', 'QNA3'))
+
+scores <- subset(df_a, type!='Individual Model') %>%
+  filter(location != 'US' & score == 'wis') %>%
+  group_by(model) %>%
+  summarize(mean_wis = mean(value))
 
 
 df_wis <- df_all %>%

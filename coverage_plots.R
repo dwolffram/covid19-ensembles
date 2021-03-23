@@ -168,6 +168,12 @@ df <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_
 df <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_qra4_ws4_inSample_unsorted.csv", 
                      add_baseline=FALSE, remove_revisions=FALSE, add_truth=TRUE, in_sample=TRUE)
 
+df <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_ws4_inSample_unsorted_2021-03-10.csv", 
+                     add_baseline=FALSE, remove_revisions=FALSE, add_truth=FALSE, in_sample=TRUE)
+
+df <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_top3_ws4.csv", add_baseline = FALSE, 
+                     remove_revisions=TRUE, add_truth=TRUE)
+
 df <- df %>% 
   group_by(id_date) %>%
   mutate(forecast_date = max(target_end_date) + 2)
@@ -185,9 +191,7 @@ df$id_date <- as.Date(df$id_date)
 
 
 for(d in as.list(unique(df$id_date))){
-  print(d)
   temp <- subset(df, id_date==d)
-  print('add truth')
   print(format(d, "%Y-%m-%d"))
   temp <- add_truth(temp, as_of=temp$forecast_date[1])
   dfs <- bind_rows(dfs, temp)
@@ -195,10 +199,12 @@ for(d in as.list(unique(df$id_date))){
 
 dfs$target_end_date <- paste0(dfs$target_end_date, '_', dfs$id_date)
 
+dfs <- dfs %>%
+  select(-c(forecast_date, id_date))
+
 ensemble_scores <- score_forecasts(dfs)
-ensemble_scores <- ensemble_scores %>%
-  select(-forecast_date)
-write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4_is_new2.csv", row.names=FALSE)
+
+write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4_is_unsorted_new2.csv", row.names=FALSE)
 
 
 plot_coverage <- function(df, width=0.05, breaks){
@@ -260,13 +266,104 @@ df_temp <- dfs
 df_temp$l <- df_temp$truth < floor(df_temp$value)
 df_temp$u <- df_temp$truth <= floor(df_temp$value)
 
+df_temp$rounded <- floor(df_temp$value)
+
+df_temp$eq <- (df_temp$rounded == df_temp$truth)
+
+View(subset(df_temp, eq==TRUE))
+
+a <- df_temp %>%
+  group_by(model, quantile) %>%
+  summarize(a = mean(truth == rounded))
+
+ggplot(data=subset(a, model %in% c('EWA', 'V4', 'GQRA4', 'QRA3', 'QRA4')), aes(x=quantile, y=a, fill=model)) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  xlab('Quantile') +
+  ylab('% of y_t = q_t')
+
+
+d <- df_temp %>%
+  filter(quantile==0.5 & model %in% c('GQRA4', 'QRA4') & truth == rounded)
+
+d <- d %>%
+  group_by(model, truth) %>%
+  summarize(count=n())
+
+ggplot(data=d, aes(x=truth, y=count, fill=model)) +
+  geom_bar(stat="identity", position = "dodge")
+
+ggplot(data=d, aes(x=truth, y=count)) +
+  geom_bar(stat="identity", position = "dodge") +
+  facet_wrap(~model)
+
+ggplot(data=d, aes(x=truth, y=count, color=model)) +
+  geom_point() +
+  geom_linerange(aes(ymin=0, ymax=count), position = position_jitter(height = 0L, seed = 1L))
+
+ggplot(data=d, aes(x=truth, y=count)) +
+  geom_point() +
+  geom_linerange(aes(ymin=0, ymax=count)) +
+  facet_wrap(~model)
+
+d <- df_temp %>%
+  filter(quantile==0.5 & model!='INVA' & truth == rounded) %>%
+  group_by(model, truth) %>%
+  summarize(count=n())
+
+ggplot(data=d, aes(x=truth, y=count)) +
+  #geom_point() +
+  geom_linerange(aes(ymin=0, ymax=count)) +
+  facet_wrap(~model, ncol=3) +
+  ylab('count of "y_t  = q_t = n"') +
+  xlab('truth') +
+  ggtitle('alpha = 0.5')
+
+ggsave('plots/evaluation_study/equality_all_0.5.png', width=20, height=24, dpi=700, unit='cm', device='png')
+
+
+d <- df_temp %>%
+  filter(quantile %in% c(0.1, 0.5, 0.9) & truth == rounded) %>%
+  group_by(quantile, model, truth) %>%
+  summarize(count=n())
+
+ggplot(data=d, aes(x=truth, y=count)) +
+  geom_point() +
+  geom_linerange(aes(ymin=0, ymax=count)) +
+  facet_grid(model~quantile)
+
+d <- df_temp %>%
+  filter(model %in% c('V4', 'GQRA4', 'QRA4') & quantile %in% seq(0.1, 0.9, 0.1) & truth == rounded) %>%
+  group_by(quantile, model, truth) %>%
+  summarize(count=n())
+
+ggplot(data=d, aes(x=truth, y=count)) +
+  #geom_point() +
+  geom_linerange(aes(ymin=0, ymax=count)) +
+  facet_grid(quantile~model)+
+  ylab('count of "y_t  = q_t = n"')
+
+ggsave('plots/evaluation_study/equality_0.1-0.9.png', width=20, height=24, dpi=700, unit='cm', device='png')
+
+ggplot(data=subset(df_temp, model %in% c('GQRA4', 'QRA3', 'QRA4')), aes(x=quantile, y=a, fill=model)) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  xlab('Quantile') +
+  ylab('% of y_t = q_t')
+
 df_temp <- df_temp %>%
   group_by(model, quantile) %>%
   summarize(l = mean(l), u=mean(u))
 
 df_temp2 <- df_temp
 
+q <- subset(df_temp, model %in% c('GQRA4'))
 
+q$rounded <- floor(q$value)
+
+mean(q$rounded == q$truth)
+
+q %>%
+  filter(quantile==0.5) %>%
+  summarize(eq =mean(truth <= rounded))
 
 
 df <- load_forecasts(models = c("CovidAnalytics-DELPHI", "COVIDhub-baseline", "CU-select", 
