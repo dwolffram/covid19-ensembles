@@ -52,7 +52,7 @@ df_train <- subset(df_train, location != 'US')
 df_test <- subset(df_test, location != 'US')
 
 
-v3_iter_fit <- function(df_train){
+v3_iter_fit <- function(df_train, c=2){
   scores <- wis(df_train)
   
   models_ranked <- scores %>%
@@ -60,6 +60,8 @@ v3_iter_fit <- function(df_train){
     summarize(meanWIS = mean(wis)) %>%
     arrange(meanWIS) %>%
     pull(model)
+  
+  n <- length(models_ranked)
   
   df_iter <- subset(df_train, model %in% models_ranked[1:2])
   
@@ -73,6 +75,22 @@ v3_iter_fit <- function(df_train){
     #print(unique(df_iter$model))
     p <- v3_fit(df_iter, models=c("F", m))
     #print(p)
+    
+    # stopping criterion
+    if (p[2] < 1/(c*n)){
+      # refit
+      models_active <- models_ranked[1:length(weights)]
+      
+      df_train <- df_train %>%
+        filter(model %in% models_active)
+      
+      weights <- v3_fit(df_train, models=models_active, p0=weights)
+      
+      # assign zero weight to remaining models
+      weights <- c(weights, numeric(n - length(weights)))
+      break
+    } 
+    
     df_iter <- V3(df_iter, params=p, models=c("F", m))
     df_iter$model <- 'F'
     
@@ -98,6 +116,8 @@ models_ranked <- scores %>%
   arrange(meanWIS) %>%
   pull(model)
 
+c <- 2
+n <- length(models_ranked)
 
 df_iter <- subset(df_train, model %in% models_ranked[1:2])
 
@@ -112,6 +132,20 @@ for (m in models_ranked[-1:-2]){
   print(unique(df_iter$model))
   p <- v3_fit(df_iter, models=c("F", m))
   print(p)
+  
+  if (p[2] < 1/(c*n)){
+    models_active <- models_ranked[1:length(weights)]
+    
+    df_train <- df_train %>%
+      filter(model %in% models_active)
+    
+    print('Refit')
+    weights <- v3_fit(df_train, models=models_active, p0=weights)
+    
+    weights <- c(weights, numeric(n - length(weights)))
+    break
+  } 
+  
   df_iter <- V3(df_iter, params=p, models=c("F", m))
   df_iter$model <- 'F'
   
@@ -119,7 +153,24 @@ for (m in models_ranked[-1:-2]){
 }
 
 
+weights2 <- v3_fit(df_train, models=models_active, p0=1.5*weights[1:length(models_active)])
+
+weights <- c(weights, numeric(n - length(weights)))
+
+a <- weights
+weights2
+
+for (i in 1:10){
+  if (i > 3) break
+  print(i)
+}
+
+weights <- c(weights, numeric(n - length(weights)))
+
+
 p3 <- v3_fit(df_train)
+p32 <- v3_fit(df_train)
+
 
 df_v3 <- V3(df_test, params=p3)
 mean_wis(df_v3)
@@ -143,22 +194,32 @@ weights
 df_it <- V3(df_train, params=w$params, models=w$models)
 mean_wis(df_it)
 
+df_it <- V3(df_test, params=w$params, models=w$models)
+mean_wis(df_it)
+
 df_ensembles <- ensemble_forecasts(df, window_sizes=4, ensembles="V3_iter", exclude_us_from_training=TRUE)
 
-file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_ws4_v3-iter.csv")
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_ws4_v3-iter_refit.csv")
 write.csv(df_ensembles, file_name, row.names=FALSE)
 
 # compute scores
 
 df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_ws4_v3-iter.csv", 
                                add_baseline = FALSE)
+
+df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_ws4_v3-iter_stop.csv", 
+                               add_baseline = FALSE)
+
 ensemble_scores <- score_forecasts(df_ensembles)
-write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_V3_iter_ws4.csv", row.names=FALSE)
+write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_V3_iter_stop_ws4.csv", row.names=FALSE)
 
 # combine scores
 
 df1 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4_oos.csv", remove_revisions=TRUE, long_format=TRUE)
+
 df2 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_V3_iter_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
+df2 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_V3_iter_stop_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
+
 df <- bind_rows(df1, df2)
 
 ggplot(subset(df, location != 'US' & window_size==4 & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 

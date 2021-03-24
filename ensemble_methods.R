@@ -97,14 +97,19 @@ v3_loss <- function(df, params, intercept=0, models){
   return(mean_wis(df_temp))
 }
 
-v3_fit <- function(df, models, method="BFGS"){
+v3_fit <- function(df, models, method="BFGS", p0){
   if(missing(models)){
     models <- sort(unique(df$model))
   }
   
   n_models = length(models)
   
-  p_optim <- optim(par = rep(1/n_models, n_models), 
+  # initial values vor optimization
+  if(missing(p0)){
+    p0 <- rep(1/n_models, n_models)
+  }
+  
+  p_optim <- optim(par = p0, 
                    fn = function(x){
                      return(v3_loss(df, params = x, intercept = 0, models))},
                    method = method)$par

@@ -58,7 +58,7 @@ ensemble_forecasts <- function(df, dates, window_sizes, ensembles=c("EWA"),
   df_ensembles <- data.frame()
   
   for (window_size in window_sizes){
-    print(paste0("Compute scores for window size ", window_size, "."))
+    print(paste0("Compute ensembles for window size ", window_size, "."))
     
     # possible test dates for given window size
     if (window_size + horizon > length(dates)){
