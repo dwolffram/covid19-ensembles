@@ -210,8 +210,11 @@ df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ense
 df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_ws4_v3-iter_stop.csv", 
                                add_baseline = FALSE)
 
+df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ensembles_1wk_noUS_ws4_v3-iter_refit.csv", 
+                               add_baseline = FALSE)
+
 ensemble_scores <- score_forecasts(df_ensembles)
-write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_V3_iter_stop_ws4.csv", row.names=FALSE)
+write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_V3_iter_refit_ws4.csv", row.names=FALSE)
 
 # combine scores
 
@@ -220,7 +223,9 @@ df1 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4_oos
 df2 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_V3_iter_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
 df2 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_V3_iter_stop_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
 
-df <- bind_rows(df1, df2)
+df3 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_V3_iter_refit_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
+df3$model <- paste0(df3$model, '-refit')
+df <- bind_rows(df1, df2, df3)
 
 ggplot(subset(df, location != 'US' & window_size==4 & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
        aes(x=reorder(model, value), y=value,
