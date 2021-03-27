@@ -4,7 +4,10 @@ library(ggplot2)
 
 df <- load_forecasts()
 
+exclude_locations <- c("11", "60", "66", "69", "72", "74", "78")
+
 df <- load_forecasts(targets = c("1 wk ahead cum death"), exclude_locations=exclude_locations)
+df <- load_forecasts(targets = c("4 wk ahead cum death"), exclude_locations=exclude_locations)
 
 
 get_available_models <- function(df, target="1 wk ahead cum death", exclude_gaps=FALSE, 
@@ -93,7 +96,7 @@ plot_availability(df, target = "1 wk ahead cum death", exclude_gaps = TRUE)
 plot_availability(df, target = "1 wk ahead cum death", drop_incomplete = TRUE)
 plot_availability(df, target = "1 wk ahead cum death", drop_incomplete = TRUE, exclude_gaps = TRUE, title=NULL)
 
-plot_availability(df, target="4 wk ahead cum death")
+plot_availability(df, target="4 wk ahead cum death", min_no_locations = 51)
 plot_availability(df, target="4 wk ahead cum death", drop_incomplete = TRUE, exclude_gaps = TRUE)
 
 plot_availability(df, target = "1 wk ahead inc death")
@@ -133,6 +136,9 @@ b <- df %>%
 available_models <- get_available_models(df, target="1 wk ahead cum death", 
                                          drop_incomplete=TRUE, exclude_gaps=TRUE)
 
+available_models <- get_available_models(df, target="4 wk ahead cum death", 
+                                         drop_incomplete=TRUE, exclude_gaps=TRUE, min_no_locations=50)
+
 relevant_models <- available_models %>%
   summarize(count = length(unique(target_end_date)), 
             start = min(target_end_date), end = max(target_end_date))
@@ -140,6 +146,21 @@ relevant_models <- available_models %>%
 relevant_models <- relevant_models %>%
   filter(start <= "2020-05-23") %>%
   pull(model)
+
+relevant_models <- relevant_models %>%
+  filter(start <= "2020-10-03" & end > '2021-01-10') %>%
+  pull(model)
+
+relevant_models
+
+# "CovidAnalytics-DELPHI" "COVIDhub-baseline"     "CU-scenario_high"      "CU-select"            
+# [5] "Karlen-pypm"           "LANL-GrowthRate"       "LNQ-ens1"              "MOBS-GLEAM_COVID"     
+# [9] "OliverWyman-Navigator" "PSI-DRAFT"             "UA-EpiCovDA"           "UCSD_NEU-DeepGLEAM"   
+# [13] "UMass-MechBayes" 
+
+models_4wk_cum_death <- c("CovidAnalytics-DELPHI", "COVIDhub-baseline", "CU-select", "Karlen-pypm", "LANL-GrowthRate", "LNQ-ens1",
+"MOBS-GLEAM_COVID", "OliverWyman-Navigator", "PSI-DRAFT", "UA-EpiCovDA", "UCSD_NEU-DeepGLEAM", "UMass-MechBayes") 
+# < 2021-04-03
 
 
 
