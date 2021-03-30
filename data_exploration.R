@@ -2,16 +2,18 @@ setwd("/home/wolffram/covid19-ensembles")
 source("data_loading.R")
 library(ggplot2)
 
-df <- load_forecasts()
-
 exclude_locations <- c("11", "60", "66", "69", "72", "74", "78")
+
+
+df <- load_forecasts(exclude_locations=exclude_locations)
+
 
 df <- load_forecasts(targets = c("1 wk ahead cum death"), exclude_locations=exclude_locations)
 df <- load_forecasts(targets = c("4 wk ahead cum death"), exclude_locations=exclude_locations)
 
 
 get_available_models <- function(df, target="1 wk ahead cum death", exclude_gaps=FALSE, 
-                                 min_no_submission=3, min_no_locations=50, drop_incomplete=FALSE){
+                                 min_no_submission=3, min_no_locations=51, drop_incomplete=FALSE){
   # pick target
   temp <- df %>%
     filter(target == !!target)
@@ -60,7 +62,7 @@ get_available_models <- function(df, target="1 wk ahead cum death", exclude_gaps
 
 
 plot_availability <- function(df, target="1 wk ahead cum death", exclude_gaps=FALSE, 
-                              min_no_locations=50, drop_incomplete=FALSE, title){
+                              min_no_locations=51, drop_incomplete=FALSE, title){
   
   temp <- get_available_models(df, target=target, exclude_gaps=exclude_gaps, 
                                    min_no_locations=min_no_locations, drop_incomplete=drop_incomplete)
@@ -80,7 +82,7 @@ plot_availability <- function(df, target="1 wk ahead cum death", exclude_gaps=FA
   plot(ggplot(temp, aes(target_end_date, model, fill= factor(forecast_missing))) + 
       geom_tile(colour = "grey50") +
       scale_fill_manual(values=c("1"="red", "0"="darkgreen", "-1"="orange"), 
-                        name = element_blank(), labels = c("Available", "Missing", "< 50 Locations")) +
+                        name = element_blank(), labels = c("Available", "Missing", "< 51 Locations")) +
       scale_x_date(breaks = seq(min(temp$target_end_date), max(temp$target_end_date), by="week")[c(FALSE, TRUE)]) +
       labs(x="Target End Date", y="Model", title=title))+
       theme_gray(base_size=10) +
@@ -137,7 +139,10 @@ available_models <- get_available_models(df, target="1 wk ahead cum death",
                                          drop_incomplete=TRUE, exclude_gaps=TRUE)
 
 available_models <- get_available_models(df, target="4 wk ahead cum death", 
-                                         drop_incomplete=TRUE, exclude_gaps=TRUE, min_no_locations=50)
+                                         drop_incomplete=TRUE, exclude_gaps=TRUE, min_no_locations=51)
+
+available_models <- get_available_models(df, target="4 wk ahead cum death", 
+                                         drop_incomplete=FALSE, exclude_gaps=FALSE, min_no_locations=51)
 
 relevant_models <- available_models %>%
   summarize(count = length(unique(target_end_date)), 
@@ -148,7 +153,7 @@ relevant_models <- relevant_models %>%
   pull(model)
 
 relevant_models <- relevant_models %>%
-  filter(start <= "2020-10-03" & end > '2021-01-10') %>%
+  filter(start <= "2020-09-05" & end > '2021-01-10' & end < '2021-04-03') %>%
   pull(model)
 
 relevant_models

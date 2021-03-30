@@ -6,24 +6,35 @@ library(tidyverse)
 library(dplyr)
 library(readr)
 
-load_truth <- function(as_of){
+load_truth <- function(target='Cumulative Deaths', as_of){
   if(missing(as_of)){
-    truth <- read.csv(paste0(path_hub, "data-truth/truth-Cumulative Deaths.csv"),
+    truth <- read.csv(paste0(path_hub, 'data-truth/truth-', target, '.csv'),
                       colClasses = c(location="character", date ="Date")) %>% 
       select(-location_name)
   }
   else{
-    truth <- read.csv(paste0("data/jhu_historic_deaths/processed/truth_jhu_deaths_as_of_",
+    target <- str_replace(tolower(target), " ", '_')
+    truth <- read.csv(paste0("data/JHU/", target, '/truth_jhu_', target, '_',
                              as_of, ".csv"), 
-                      colClasses = c(location="character", date ="Date")) %>%
-      rename(value = truth_at_forecast_date)
+                      colClasses = c(location="character", date ="Date"))
   }
   
   return(truth)
 }
 
 add_truth <- function(df, as_of){
-  truth <- load_truth(as_of) %>%
+  target <- unique(df$target)
+  if (str_detect(target, 'cum death')){
+      target <- 'Cumulative Deaths'
+    } else if (str_detect(target, 'inc death')){
+      target <- 'Incident Deaths'
+    } else if (str_detect(target, 'cum case')){
+      target <- 'Cumulative Cases'
+    } else if (str_detect(target, 'inc case')){
+      target <- 'Incident Cases'
+    }
+   
+  truth <- load_truth(target, as_of) %>%
     rename(truth = value) 
   
   df <- df %>%
