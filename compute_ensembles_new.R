@@ -18,10 +18,24 @@ models <- c("CovidAnalytics-DELPHI", "COVIDhub-baseline", "CU-select", "Karlen-p
 exclude_locations <- c("11", "60", "66", "69", "72", "74", "78")
 
 df <- load_forecasts(models=models, targets=c("4 wk ahead cum death"),
-                     exclude_locations=exclude_locations, start_date="2020-09-05", end_date='2021-03-27',
-                     intersect_dates=TRUE)
+                     exclude_locations=exclude_locations, start_date="2020-09-05", end_date='2021-03-27')
 
+unique(df$model)
 length(unique(df$target_end_date))
+
+b <- df %>%
+  group_by(target, model, target_end_date, location) %>%
+  mutate(n_quantiles = n()) %>%
+  group_by(target, model) %>%
+  mutate(n_quantiles = min(n_quantiles)) %>%
+  filter(n_quantiles == 23 | (str_detect(target, 'inc case') & n_quantiles == 7)) %>%
+  select(-n_quantiles)
+
+b %>%
+  group_by(model, target_end_date, location) %>%
+  summarize(n_quantiles = n()) %>%
+  group_by(model) %>%
+  summarize(n_quantiles = min(n_quantiles))
 
 # no_cores <- detectCores() - 1  
 no_cores <- 32
@@ -35,6 +49,18 @@ window_sizes <- 1:4
 
 df_ensembles <- ensemble_forecasts(df, window_sizes=window_sizes, ensembles=ensembles, 
                                    exclude_us_from_training=TRUE)
+
+d <- train_test_split(df, as.Date('2020-10-24'), 4, 4)
+df_train <- d$df_train
+p <- inv_fit(df_train)
+train_wis <- score_forecasts(df_train, scores='wis')
+params <- train_wis %>%
+  group_by(location, model) %>%
+  summarize(param = sum(wis))%>%
+  group_by(location) %>%
+  mutate_at('param', ~replace(., . == 0, min(.[. > 0])/2)) %>% # if 0, use 0.5*(lowest non-zero wis)
+  mutate(param = (1/param)/(sum(1/param))) %>%
+  as.data.frame()
 
 df_ensembles <- ensemble_forecasts(df, window_sizes=4, ensembles=c("EWA"), 
                                    exclude_us_from_training=TRUE)

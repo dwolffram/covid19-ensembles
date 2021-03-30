@@ -141,6 +141,20 @@ load_forecasts <- function(models, exclude_locations=c(), targets=paste(1:4, "wk
       slice(which.max(forecast_date)) %>%
       as.data.frame()
     
+    # check if all quantiles are available
+    df_temp <- df_temp %>%
+      group_by(target, target_end_date, location) %>%
+      mutate(n_quantiles = n()) %>%
+      group_by(target) %>%
+      mutate(n_quantiles = min(n_quantiles)) %>%
+      filter(n_quantiles == 23 | (str_detect(target, 'inc case') & n_quantiles == 7)) %>%
+      select(-n_quantiles)
+    
+    if (nrow(df_temp) == 0) {
+      print(paste0("Not all required quantiles available for: ", m))
+      next
+    }  
+    
     df_temp$model <- m
     df <- bind_rows(df, df_temp)
   }
