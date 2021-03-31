@@ -100,6 +100,16 @@ df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/df_ense
 ensemble_scores <- score_forecasts(df_ensembles)
 write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_KarOlUM_INVA.csv", row.names=FALSE)
 
+df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/4wk_cum_death/df_ensembles_4wk_cum_death.csv", 
+                               add_baseline = TRUE)
+ensemble_scores <- score_forecasts(df_ensembles)
+write.csv(ensemble_scores, "scores/evaluation_study/4wk_cum_death/ensemble_scores_4wk_cum_death.csv", row.names=FALSE)
+
+df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/4wk_cum_death/df_ensembles_4wk_cum_death_v3-iter_refit.csv", 
+                               add_baseline = FALSE)
+ensemble_scores <- score_forecasts(df_ensembles)
+write.csv(ensemble_scores, "scores/evaluation_study/4wk_cum_death/ensemble_scores_4wk_cum_death_v3-iter_refit.csv", row.names=FALSE)
+
 
 df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all.csv", remove_revisions=TRUE, long_format=TRUE)
 
@@ -109,10 +119,17 @@ df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_KarUMBa.csv"
 
 df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all_QNA3_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
 
+df2 <- load_scores("scores/evaluation_study/4wk_cum_death/ensemble_scores_4wk_cum_death.csv", remove_revisions=TRUE, long_format=TRUE)
+df3 <- load_scores("scores/evaluation_study/4wk_cum_death/ensemble_scores_4wk_cum_death_v3-iter_refit.csv", 
+                   remove_revisions=TRUE, long_format=TRUE)
 
-plot_wis(df, locations='states', window_sizes=4, x=model, facet=NULL, angle=90, vjust=0.5)
+df4 <- bind_rows(df2, df3)
 
-ggplot(subset(df, location !='US' & window_size==4 & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
+plot_wis(df4, locations='states', window_sizes=4, x=model, facet=NULL, angle=90, vjust=0.5)
+plot_wis(df3, locations='states', window_sizes=1:4, x=window_size, facet=model, angle=90, vjust=0.5)
+
+
+ggplot(subset(df4, location !='US' & window_size==4 & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
        aes(x=reorder(model, value), y=value,
            fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
   geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +

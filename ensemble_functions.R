@@ -17,7 +17,7 @@ train_test_split <- function(df, test_date, horizon, window_size){
   df_train = subset(df, (target_end_date >= train_start) & (target_end_date <= train_end))
   
   # load historic truth data for training (possibly unrevised at forecast date)
-  forecast_date <- max(df_train$target_end_date + 2)
+  forecast_date <- max(df_train$target_end_date) + 2
   
   df_train <- add_truth(df_train, as_of=forecast_date)
   

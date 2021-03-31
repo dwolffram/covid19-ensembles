@@ -221,11 +221,20 @@ write.csv(ensemble_scores, "scores/evaluation_study/ensemble_scores_1wk_noUS_V3_
 df1 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all_ws4_oos.csv", remove_revisions=TRUE, long_format=TRUE)
 
 df2 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_V3_iter_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
-df2 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_V3_iter_stop_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
 
-df3 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_V3_iter_refit_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
-df3$model <- paste0(df3$model, '-refit')
-df <- bind_rows(df1, df2, df3)
+df3 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_V3_iter_stop_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
+df3$model <- paste0(df3$model, '-stop')
+
+df4 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_V3_iter_refit_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
+df4$model <- paste0(df4$model, '-refit')
+
+df5 <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_top3_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
+df5$model <- paste0(df5$model, '-3F')
+
+df <- bind_rows(df1, df2, df3, df4, df5)
+
+df <- df %>%
+  filter(model != 'Baseline-3F')
 
 ggplot(subset(df, location != 'US' & window_size==4 & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
        aes(x=reorder(model, value), y=value,
@@ -240,7 +249,7 @@ ggplot(subset(df, location != 'US' & window_size==4 & score %in% c("wgt_pen_l", 
   labs(x = NULL,
        y = "Mean WIS")
 
-ggsave('plots/evaluation_study/mean_wis_1wk_v3-iter.png', width=20, height=15, dpi=500, unit='cm', device='png')
+ggsave('plots/evaluation_study/mean_wis_1wk_v3-iter_all.png', width=20, height=15, dpi=500, unit='cm', device='png')
 
 
 s <- df %>%
