@@ -110,6 +110,10 @@ df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/4wk_cum
 ensemble_scores <- score_forecasts(df_ensembles)
 write.csv(ensemble_scores, "scores/evaluation_study/4wk_cum_death/ensemble_scores_4wk_cum_death_v3-iter_refit.csv", row.names=FALSE)
 
+df_ensembles <- load_ensembles("data/ensemble_forecasts/evaluation_study/4wk_cum_death/df_ensembles_4wk_cum_death_top3.csv", 
+                               add_baseline = FALSE)
+ensemble_scores <- score_forecasts(df_ensembles)
+write.csv(ensemble_scores, "scores/evaluation_study/4wk_cum_death/ensemble_scores_4wk_cum_death_top3.csv", row.names=FALSE)
 
 df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all.csv", remove_revisions=TRUE, long_format=TRUE)
 
@@ -119,17 +123,35 @@ df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_KarUMBa.csv"
 
 df <- load_scores("scores/evaluation_study/ensemble_scores_1wk_noUS_all_QNA3_ws4.csv", remove_revisions=TRUE, long_format=TRUE)
 
-df2 <- load_scores("scores/evaluation_study/4wk_cum_death/ensemble_scores_4wk_cum_death.csv", remove_revisions=TRUE, long_format=TRUE)
+df2 <- load_scores("scores/evaluation_study/4wk_cum_death/ensemble_scores_4wk_cum_death.csv", 
+                   remove_revisions=FALSE, long_format=TRUE)
 df3 <- load_scores("scores/evaluation_study/4wk_cum_death/ensemble_scores_4wk_cum_death_v3-iter_refit.csv", 
-                   remove_revisions=TRUE, long_format=TRUE)
+                   remove_revisions=FALSE, long_format=TRUE)
+df4 <- load_scores("scores/evaluation_study/4wk_cum_death/ensemble_scores_4wk_cum_death_top3.csv", 
+                   remove_revisions=FALSE, long_format=TRUE)
+df5 <- load_scores("scores/evaluation_study/4wk_cum_death/covidhub-ensemble_scores_4wk_cum_death.csv",
+                   remove_revisions=FALSE, long_format=TRUE)
 
-df4 <- bind_rows(df2, df3)
+e <- df5 %>%
+  group_by(target_end_date) %>%
+  summarize(count = n_distinct(location))
+
+l1 <- df5 %>%
+  filter(target_end_date == '2020-09-05') %>%
+  distinct(location)
+
+l2 <- unique(df_all$location)
+
+df4$model <- paste0(df4$model, '-3F')
+
+df_all <- bind_rows(df2, df3, df4, df5)
 
 plot_wis(df4, locations='states', window_sizes=4, x=model, facet=NULL, angle=90, vjust=0.5)
+plot_wis(df5, locations='states', window_sizes=1:4, x=window_size, facet=model, angle=90, vjust=0.5)
 plot_wis(df3, locations='states', window_sizes=1:4, x=window_size, facet=model, angle=90, vjust=0.5)
 
 
-ggplot(subset(df4, location !='US' & window_size==4 & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
+ggplot(subset(df_all, location !='US' & (window_size==4 | model=='COVIDhub-ensemble') & score %in% c("wgt_pen_l", "wgt_iw", "wgt_pen_u")), 
        aes(x=reorder(model, value), y=value,
            fill=factor(score, levels=c("wgt_pen_l", "wgt_iw", "wgt_pen_u")))) +
   geom_bar(position="stack", stat="summary", fun=mean, width=0.7) +
@@ -141,6 +163,9 @@ ggplot(subset(df4, location !='US' & window_size==4 & score %in% c("wgt_pen_l", 
   #scale_x_discrete(labels = function(l) parse(text=l)) + 
   labs(x = NULL,
        y = "Mean WIS")
+
+ggsave('plots/evaluation_study/4wk_cum_death/wis_4wk_cum_death_ws4.png', width=30, height=15, dpi=500, unit='cm', device='png')
+
 
 df$model <- paste0(df$model, '-3')
 
@@ -298,6 +323,22 @@ individual_scores <- score_forecasts(df_individual)
 write.csv(individual_scores, "scores/evaluation_study/individual_scores_1wk.csv", row.names=FALSE)
 
 unique(df$target_end_date)
+
+# Covidhub-Ensemble
+df_individual <- load_forecasts(models = c("COVIDhub-ensemble"),
+                                targets = "4 wk ahead cum death",
+                                exclude_locations = c("11", "60", "66", "69", "72", "74", "78"), 
+                                start_date="2020-09-05", end_date='2021-03-27') %>% 
+  select(-c(forecast_date, type)) %>%
+  select(target_end_date, everything())
+
+individual_scores <- score_forecasts(df_individual)
+
+individual_scores  <- individual_scores %>% 
+  select(-c(forecast_date, type)) %>%
+  select(target_end_date, everything())
+
+write.csv(individual_scores, "scores/evaluation_study/4wk_cum_death/covidhub-ensemble_scores_4wk_cum_death.csv", row.names=FALSE)
 
 ### Flexible subset of models
 
