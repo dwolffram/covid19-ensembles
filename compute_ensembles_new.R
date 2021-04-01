@@ -8,17 +8,27 @@ source("ensemble_functions.R")
 library(doParallel)
 
 
+exclude_locations <- c("11", "60", "66", "69", "72", "74", "78")
 
 
 # 4 wk cum death
 models <- c("CovidAnalytics-DELPHI", "COVIDhub-baseline", "CU-select", "Karlen-pypm", "LANL-GrowthRate", "LNQ-ens1",
                           "MOBS-GLEAM_COVID", "OliverWyman-Navigator", "PSI-DRAFT", "UA-EpiCovDA", "UMass-MechBayes") 
 # < 2021-04-03
-
-exclude_locations <- c("11", "60", "66", "69", "72", "74", "78")
-
 df <- load_forecasts(models=models, targets=c("4 wk ahead cum death"),
                      exclude_locations=exclude_locations, start_date="2020-09-05", end_date='2021-03-27')
+
+
+# 1 wk inc death
+models <- c("CEID-Walk", "CovidAnalytics-DELPHI", "COVIDhub-baseline", 
+  "COVIDhub-ensemble", "CU-nochange", "CU-scenario_high", "CU-scenario_low", 
+  "CU-scenario_mid", "CU-select", "Karlen-pypm", "LANL-GrowthRate", 
+  "UA-EpiCovDA", "UCSD_NEU-DeepGLEAM", "UMass-MechBayes")
+# < 2021-04-03
+
+
+df <- load_forecasts(models=models, targets=c("1 wk ahead inc death"),
+                     exclude_locations=exclude_locations, start_date="2020-10-03", end_date='2021-03-27')
 
 unique(df$model)
 length(unique(df$target_end_date))
@@ -50,16 +60,18 @@ df_ensembles <- ensemble_forecasts(df, window_sizes=window_sizes, ensembles=ense
                                    exclude_us_from_training=TRUE)
 
 
-file_name <- paste0("data/ensemble_forecasts/evaluation_study/4wk_cum_death/df_ensembles_4wk_cum_death.csv")
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/1wk_inc_death/df_ensembles_1wk_inc_death.csv")
 write.csv(df_ensembles, file_name, row.names=FALSE)
 
 
 # Ensembles on Subset
 
-df_ensembles <- ensemble_forecasts(df, window_sizes=window_sizes, ensembles=ensembles,
+df_ensembles <- ensemble_forecasts(df, window_sizes=4, ensembles=ensembles,
                                    exclude_us_from_training=TRUE, n_models = 3)
 
 file_name <- paste0("data/ensemble_forecasts/evaluation_study/4wk_cum_death/df_ensembles_4wk_cum_death_top3.csv")
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/1wk_inc_death/df_ensembles_1wk_inc_death_top3_ws4.csv")
+
 write.csv(df_ensembles, file_name, row.names=FALSE)
 
 df1 <- subset(df_ensembles, window_size==4)
@@ -71,6 +83,6 @@ write.csv(df1, file_name, row.names=FALSE)
 
 df_ensembles <- ensemble_forecasts(df, window_sizes=window_sizes, ensembles="V3_iter", exclude_us_from_training=TRUE)
 
-file_name <- paste0("data/ensemble_forecasts/evaluation_study/4wk_cum_death/df_ensembles_4wk_cum_death_v3-iter_refit.csv")
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/1wk_inc_death/df_ensembles_1wk_inc_death_v3-iter_refit.csv")
 write.csv(df_ensembles, file_name, row.names=FALSE)
 
