@@ -20,15 +20,19 @@ df <- load_forecasts(models=models, targets=c("4 wk ahead cum death"),
 
 
 # 1 wk inc death
-models <- c("CEID-Walk", "CovidAnalytics-DELPHI", "COVIDhub-baseline", 
-  "COVIDhub-ensemble", "CU-nochange", "CU-scenario_high", "CU-scenario_low", 
-  "CU-scenario_mid", "CU-select", "Karlen-pypm", "LANL-GrowthRate", 
+models <- c("CEID-Walk", "CovidAnalytics-DELPHI", "COVIDhub-baseline", "CU-select", "Karlen-pypm", "LANL-GrowthRate", 
   "UA-EpiCovDA", "UCSD_NEU-DeepGLEAM", "UMass-MechBayes")
 # < 2021-04-03
+# c("CU-nochange", "CU-scenario_high", "CU-scenario_low", "CU-scenario_mid") singular design matrix
+
+# 4 wk inc death
+models <- c("CovidAnalytics-DELPHI", "COVIDhub-baseline",
+            "CU-select", "Karlen-pypm", "LANL-GrowthRate", "UA-EpiCovDA", 
+            "UCSD_NEU-DeepGLEAM", "UMass-MechBayes")
 
 
-df <- load_forecasts(models=models, targets=c("1 wk ahead inc death"),
-                     exclude_locations=exclude_locations, start_date="2020-10-03", end_date='2021-03-27')
+df <- load_forecasts(models=models, targets=c("4 wk ahead inc death"),
+                     exclude_locations=exclude_locations, start_date="2020-10-24", end_date='2021-03-27')
 
 unique(df$model)
 length(unique(df$target_end_date))
@@ -47,20 +51,61 @@ b %>%
   group_by(model) %>%
   summarize(n_quantiles = min(n_quantiles))
 
+a <- subset(df, target_end_date == '2021-03-27')
+a %>%
+  group_by(model, target_end_date) %>%
+  summarize(n_distinct(forecast_date))
+
+dfs <- train_test_split(df, as.Date('2021-03-27'), 1, 4)
+
+df_train <- dfs$df_train
+df_train <- subset(df_train, location != 'US')
+
+df_test <- dfs$df_test
+p <- qra3_fit(df_train)
+
+dput(unique(df_train$model))
+df_train <- df_train %>%
+  filter(!(model %in% c("CU-nochange", "CU-scenario_high", "CU-scenario_low", 
+                        "CU-scenario_mid")))
+
+quantile_levels <- sort(unique(df_train$quantile))
+df_params <- data.frame()
+for (quantile_level in quantile_levels){
+  print(quantile_level)
+  df_temp <- subset(df_train, quantile==quantile_level) %>% 
+    select(c("target_end_date", "location", "truth", "model", "value")) %>% 
+    spread(model, value) %>% 
+    drop_na()
+  
+  params <- rq(truth ~ . - target_end_date - location - truth -1, 
+               tau = quantile_level, data = df_temp)$coefficients
+  
+  params <- data.frame(model=str_sub(names(params), 2, -2), quantile=quantile_level, 
+                       param=params, row.names = NULL)
+  df_params <- bind_rows(df_params, params)
+}
+
+x <- df_temp %>%
+  select(- c(target_end_date, location, truth))
+
+df_forecasts <- build_ensembles(df_train, df_test, 'QRA3')
+
 # no_cores <- detectCores() - 1  
 no_cores <- 32
 registerDoParallel(cores=no_cores)  
+registerDoSEQ()
 
 ensembles <- c("EWA", "MED", "INV", "INVA", "V2", "V3", "V4", "QRA2", "QRA3", 
                "QRA4", "GQRA2", "GQRA3", "GQRA4", "QNA3")
-window_sizes <- 1:4
+window_sizes <- 4
 
 
 df_ensembles <- ensemble_forecasts(df, window_sizes=window_sizes, ensembles=ensembles, 
                                    exclude_us_from_training=TRUE)
 
 
-file_name <- paste0("data/ensemble_forecasts/evaluation_study/1wk_inc_death/df_ensembles_1wk_inc_death.csv")
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/4wk_inc_death/df_ensembles_4wk_inc_death.csv")
 write.csv(df_ensembles, file_name, row.names=FALSE)
 
 
@@ -71,6 +116,8 @@ df_ensembles <- ensemble_forecasts(df, window_sizes=4, ensembles=ensembles,
 
 file_name <- paste0("data/ensemble_forecasts/evaluation_study/4wk_cum_death/df_ensembles_4wk_cum_death_top3.csv")
 file_name <- paste0("data/ensemble_forecasts/evaluation_study/1wk_inc_death/df_ensembles_1wk_inc_death_top3_ws4.csv")
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/4wk_inc_death/df_ensembles_4wk_inc_death_top3_ws4.csv")
+
 
 write.csv(df_ensembles, file_name, row.names=FALSE)
 
@@ -83,6 +130,6 @@ write.csv(df1, file_name, row.names=FALSE)
 
 df_ensembles <- ensemble_forecasts(df, window_sizes=window_sizes, ensembles="V3_iter", exclude_us_from_training=TRUE)
 
-file_name <- paste0("data/ensemble_forecasts/evaluation_study/1wk_inc_death/df_ensembles_1wk_inc_death_v3-iter_refit.csv")
+file_name <- paste0("data/ensemble_forecasts/evaluation_study/4wk_inc_death/df_ensembles_4wk_inc_death_v3-iter_refit.csv")
 write.csv(df_ensembles, file_name, row.names=FALSE)
 

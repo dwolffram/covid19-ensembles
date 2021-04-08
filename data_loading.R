@@ -5,12 +5,28 @@ path_hub <- "../covid19-forecast-hub/"
 library(tidyverse)
 library(dplyr)
 library(readr)
+library(MMWRweek)
 
 load_truth <- function(target='Cumulative Deaths', as_of){
   if(missing(as_of)){
     truth <- read.csv(paste0(path_hub, 'data-truth/truth-', target, '.csv'),
                       colClasses = c(location="character", date ="Date")) %>% 
       select(-location_name)
+    
+    if(str_detect(target, 'Incident')){
+      truth <- truth %>%
+        filter(nchar(location) == 2)
+      
+      truth$epiyear <- MMWRweek(truth$date)$MMWRyear
+      truth$epiweek <- MMWRweek(truth$date)$MMWRweek
+      
+      truth <- truth %>% 
+        group_by(location, epiyear, epiweek) %>%
+        arrange(date) %>%
+        summarise(date=max(date), value = sum(value)) %>%
+        ungroup() %>%
+        select(c(date, location, value))
+    }
   }
   else{
     target <- str_replace(tolower(target), " ", '_')
