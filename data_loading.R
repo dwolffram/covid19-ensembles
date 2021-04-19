@@ -315,12 +315,12 @@ load_scores <- function(filename, scores=c('ae', 'wis', 'wis_decomposition'),
   }
   
   # fix order of ensemble model names
-  if(str_detect(filename, 'ensemble')){
-    df$model <- factor(df$model, levels=intersect(c('EWA', 'MED', 'INV', 'INVA', 'V2', 'V3', 'V4', 
-                                                    'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4', 'QNA3', 'V3_iter',
-                                                    'Baseline', 'COVIDhub-ensemble'),
-                                                  unique(df$model)))
-  }
+  # if(str_detect(filename, 'ensemble')){
+  #   df$model <- factor(df$model, levels=intersect(c('EWA', 'MED', 'INV', 'INVA', 'V2', 'V3', 'V4', 
+  #                                                   'GQRA2', 'GQRA3', 'GQRA4', 'QRA2', 'QRA3', 'QRA4', 'QNA3', 'V3_iter',
+  #                                                   'Baseline', 'COVIDhub-ensemble'),
+  #                                                 unique(df$model)))
+  # }
   
   if(remove_revisions){
     df <- remove_revisions(df)

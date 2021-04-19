@@ -113,6 +113,10 @@ plot_availability(df, target = "4 wk ahead inc death")
 plot_availability(df, target = "4 wk ahead inc death", exclude_gaps = TRUE)
 plot_availability(df, target = "4 wk ahead inc death", drop_incomplete = TRUE, exclude_gaps = TRUE)
 
+plot_availability(df, target = "1 wk ahead inc case")
+plot_availability(df, target = "1 wk ahead inc case", exclude_gaps = TRUE)
+plot_availability(df, target = "1 wk ahead inc case", drop_incomplete = TRUE, exclude_gaps = TRUE)
+
 ggsave('plots/model_availability.png', width=15.5, height=19, dpi=500, unit='cm', device='png')
 ggsave('plots/model_availability_filtered.png', width=15.5, height=12, dpi=500, unit='cm', device='png')
 
@@ -155,6 +159,9 @@ available_models <- get_available_models(df, target="4 wk ahead cum death",
 available_models <- get_available_models(df, target="1 wk ahead inc death", 
                                          drop_incomplete=TRUE, exclude_gaps=TRUE, min_no_locations=51)
 
+available_models <- get_available_models(df, target="1 wk ahead inc case", 
+                                         drop_incomplete=TRUE, exclude_gaps=TRUE, min_no_locations=51)
+
 available_models <- get_available_models(df, target="4 wk ahead inc death", 
                                          drop_incomplete=TRUE, exclude_gaps=TRUE, min_no_locations=51)
 
@@ -177,6 +184,11 @@ relevant_models <- relevant_models %>%
   pull(model)
 
 # 4wk inc death
+relevant_models <- relevant_models %>%
+  filter(start <= "2020-10-24" & end > '2021-01-10') %>%
+  pull(model)
+
+# 1wk inc case
 relevant_models <- relevant_models %>%
   filter(start <= "2020-10-24" & end > '2021-01-10') %>%
   pull(model)

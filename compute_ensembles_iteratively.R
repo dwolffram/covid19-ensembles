@@ -84,6 +84,8 @@ v3_iter_fit <- function(df_train, c=2){
       df_train <- df_train %>%
         filter(model %in% models_active)
       
+      # print(paste0('Stopped: Refitting with starting values: ', weights, ',\n Models: ', models_active))
+      
       weights <- v3_fit(df_train, models=models_active, p0=weights)
       
       # assign zero weight to remaining models
