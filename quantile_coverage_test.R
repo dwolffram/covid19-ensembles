@@ -1,4 +1,5 @@
 test_coverage <- function(df, verbose=FALSE){
+  
   results <- df %>%
     mutate(I = truth <= value) %>%
     group_by(quantile) %>%
@@ -12,10 +13,10 @@ test_coverage <- function(df, verbose=FALSE){
               n0 = sum(1 - I), 
               p1 = mean(I),
               
-              n00 = sum(I00, na.rm=TRUE),
-              n01 = sum(I01, na.rm=TRUE),
-              n10 = sum(I10, na.rm=TRUE),
-              n11 = sum(I11, na.rm=TRUE),
+              n00 = sum(I00),
+              n01 = sum(I01),
+              n10 = sum(I10),
+              n11 = sum(I11),
               
               p = (n01 + n11)/(n00 + n01 + n10 + n11),
               
@@ -36,7 +37,7 @@ test_coverage <- function(df, verbose=FALSE){
               p_ind = 1-pchisq(LR_ind, 1),
               
               LR_cc = -2*log(L_uc_0/L_ind_1),
-              p_cc = 1-pchisq(LR_cc, 1)
+              p_cc = 1-pchisq(LR_cc, 2)
     )
   
   if(!verbose){
@@ -47,7 +48,6 @@ test_coverage <- function(df, verbose=FALSE){
   return(results)
 }
 
-res <- test_coverage(df)
 
 # Example
 
@@ -55,14 +55,13 @@ alphas <- round(seq(0.1, 0.9, 0.1), 3)
 
 size=5
 mu=10
-sample <- rnbinom(500, size=size, mu=mu)
+sample <- rnbinom(200, size=size, mu=mu)
 F <- qnbinom(p=alphas, size=size, mu=mu)
 hist(sample)
 
-sample <- rnorm(200)
+sample <- rnorm(500)
 F <- qnorm(p=alphas)
 hist(sample)
-
 
 F <- data.frame(quantile=alphas, value=F)
 
@@ -73,129 +72,56 @@ df$index <- rep(1:length(sample), each=length(alphas))
 res <- test_coverage(df)
 
 
+sample_norm <- function(n=100, alphas=round(seq(0.1, 0.9, 0.1), 3)){
+  sample <- rnorm(n)
+  F <- qnorm(p=alphas)
+  F <- data.frame(quantile=alphas, value=F)
+  df <- bind_rows(replicate(length(sample), F, simplify = FALSE))
+  df$truth <- rep(sample, each=length(alphas))
+  df$index <- rep(1:length(sample), each=length(alphas))
+  return(df)
+}
+
+sample_negbin <- function(n=100, size=5, mu=10, alphas=round(seq(0.1, 0.9, 0.1), 3)){
+  sample <- rnbinom(n, size=size, mu=mu)
+  F <- qnbinom(p=alphas, size=size, mu=mu)
+  F <- data.frame(quantile=alphas, value=F)
+  df <- bind_rows(replicate(length(sample), F, simplify = FALSE))
+  df$truth <- rep(sample, each=length(alphas))
+  df$index <- rep(1:length(sample), each=length(alphas))
+  return(df)
+}
 
 
+res <- test_coverage(sample_norm())
 
+results_df = data.frame()
+for (i in 1:1000){
+  res <- test_coverage(sample_norm(200))
+  res$index <- i
+  results_df <- bind_rows(results_df, res)
+}
+mean(results_df$p_cc < 0.05)
 
-
-
-temp <- df %>%
-  mutate("I_alpha" = truth <= get(paste0('quantile_', 0.8)))
-
-
-test_coverage_uc(df, 0.8, 0.2)
-
-test_independence(df, 0.8, 0.2)
-
-test_coverage(df, 0.8, 0.2)
-
-test_coverage(df, 0.6)
-
-
-size=5
-mu=10
-sample <- rnbinom(500, size=size, mu=mu)
-F <- qnbinom(p=alphas, size=size, mu=mu)
-hist(sample, freq=FALSE)
-
-F <- data.frame(quantile=alphas, value=F)
-
-df <- bind_rows(replicate(length(sample), F, simplify = FALSE))
-df$truth <- rep(sample, each=length(alphas))
-df$index <- rep(1:length(sample), each=length(alphas))
-
-df$I <- df$truth <= floor(df$value)
-
-# df <- df %>%
-#   group_by(quantile) %>%
-#   summarize(n1 = sum(I), n0 = sum(1 - I), p1 = mean(I))
-
-
-results <- df %>%
+results_df %>%
   group_by(quantile) %>%
-  mutate(I_lag = lag(I)) %>%
-  mutate(I11 = ifelse(is.na(I_lag), NA, I_lag & I), 
-         I00 = ifelse(is.na(I_lag), NA, !I_lag & !I), 
-         I01 = ifelse(is.na(I_lag), NA, !I_lag & I),
-         I10 = ifelse(is.na(I_lag), NA, I_lag & !I)) %>%
-  drop_na() %>%
-  summarize(n1 = sum(I), 
-            n0 = sum(1 - I), 
-            p1 = mean(I),
-            
-            n00 = sum(I00, na.rm=TRUE),
-            n01 = sum(I01, na.rm=TRUE),
-            n10 = sum(I10, na.rm=TRUE),
-            n11 = sum(I11, na.rm=TRUE),
-            
-            p = (n01 + n11)/(n00 + n01 + n10 + n11),
-            
-            p00 = n00/(n00 + n01),
-            p01 = n01/(n00 + n01),
-            p10 = n10/(n10 + n11),
-            p11 = n11/(n10 + n11),
-            
-            L_uc_0 = (1 - unique(quantile))^n0 * unique(quantile)^n1,
-            L_uc_1 = (1 - p1)^n0 * p1^n1,
-            
-            LR_uc = -2*log(L_uc_0/L_uc_1),
-            p_uc = 1-pchisq(LR_uc, 1),
-            
-            L_ind_0 = (1 - p)^(n00 + n10) * p^(n01 + n11),
-            L_ind_1 = p00^n00 * p01^n01 * p10^n10 * p11^n11,
-            LR_ind = -2*log(L_ind_0/L_ind_1),
-            p_ind = 1-pchisq(LR_ind, 1),
-            
-            LR_cc = -2*log(L_uc_0/L_ind_1),
-            p_cc = 1-pchisq(LR_cc, 1)
-            )
-    
-         
-         
+  summarize(false_positive = mean(p_cc < 0.05))
 
-n00 <- sum(df$I00, na.rm=TRUE)
-n01 <- sum(df$I01, na.rm=TRUE)
-n10 <- sum(df$I10, na.rm=TRUE)
-n11 <- sum(df$I11, na.rm=TRUE)
 
-p <- (n01 + n11)/(n00 + n01 + n10 + n11)
 
-p00 <- n00/(n00 + n01)
-p01 <- n01/(n00 + n01)
-p10 <- n10/(n10 + n11)
-p11 <- n11/(n10 + n11)
 
-L0 <- (1 - p)^(n00 + n10) * p^(n01 + n11)
-L1 <- p00^n00 * p01^n01 * p10^n10 * p11^n11
-
-LR_ind <- -2*log(L0/L1)
-pval <- 1-pchisq(LR_ind, 1)
-
-test_uc <- function(p0, p1, n0, n1){
-  L0 <- (1 - p0)^n0 * p0^n1
-  L1 <- (1 - p1)^n0 * p1^n1
-  
-  LR_uc <- -2*log(L0/L1)
-  pval <- 1-pchisq(LR_uc, 1)
-  
-  return(list(LR_uc=LR_uc, p_uc=pval))
+results_df = data.frame()
+for (i in 1:1000){
+  res <- test_coverage(sample_negbin(200))
+  res$index <- i
+  results_df <- bind_rows(results_df, res)
 }
+mean(results_df$p_cc < 0.05)
 
-test_ind <- function(){
-  
-}
+results_df %>%
+  group_by(quantile) %>%
+  summarize(false_positive = mean(p_cc < 0.05))
 
-test_uc(0.1, 0.144, 428, 72)
-
-# a <- apply(df, 1, function(x) test_uc(x['quantile'], x['p1'], x['n0'], x['n1']))
-# a$pval
-# 
-# df %>%
-#   mutate(LR_uc = test_uc(quantile, p1, n0, n1)) %>% unnest()
-
-b <- df %>%
-  group_by_all() %>%
-  bind_cols(test_uc(.$quantile, .$p1, .$n0, .$n1))
 
 
 
