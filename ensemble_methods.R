@@ -444,6 +444,56 @@ gqra4_fit <- function(df, groups, method="BFGS"){
   return(temp)
 }
 
+v3_iter_fit <- function(df_train, c=2){
+  scores <- wis(df_train)
+  
+  models_ranked <- scores %>%
+    group_by(model) %>%
+    summarize(meanWIS = mean(wis)) %>%
+    arrange(meanWIS) %>%
+    pull(model)
+  
+  n <- length(models_ranked)
+  
+  df_iter <- subset(df_train, model %in% models_ranked[1:2])
+  
+  p <- v3_fit(df_iter, models=models_ranked[1:2])
+  df_iter <- V3(df_iter, params=p, models=models_ranked[1:2])
+  df_iter$model <- 'F'
+  weights <- p
+  
+  for (m in models_ranked[-1:-2]){
+    df_iter <- bind_rows(df_iter, subset(df_train, model == m))
+    #print(unique(df_iter$model))
+    p <- v3_fit(df_iter, models=c("F", m))
+    #print(p)
+    
+    # stopping criterion
+    if (p[2] < 1/(c*n)){
+      # refit
+      models_active <- models_ranked[1:length(weights)]
+      
+      df_train <- df_train %>%
+        filter(model %in% models_active)
+      
+      # print(paste0('Stopped: Refitting with starting values: ', weights, ',\n Models: ', models_active))
+      
+      weights <- v3_fit(df_train, models=models_active, p0=weights)
+      
+      # assign zero weight to remaining models
+      weights <- c(weights, numeric(n - length(weights)))
+      break
+    } 
+    
+    df_iter <- V3(df_iter, params=p, models=c("F", m))
+    df_iter$model <- 'F'
+    
+    weights <- c(p[1]*weights, p[2])
+  }
+  
+  return(list(models=models_ranked, params=weights))
+}
+
 
 ### GQRA_2
 
