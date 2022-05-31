@@ -9,7 +9,7 @@ library(MMWRweek)
 
 load_truth <- function(target='Cumulative Deaths', as_of){
   if(missing(as_of)){
-    truth <- read.csv(paste0('https://raw.githubusercontent.com/reichlab/covid19-forecast-hub/master/data-truth/truth-', str_replace(target, ' ', '%20'), '.csv'),
+    truth <- read.csv(paste0('https://media.githubusercontent.com/media/reichlab/covid19-forecast-hub/master/data-truth/truth-', str_replace(target, ' ', '%20'), '.csv'),
                       colClasses = c(location="character", date ="Date")) %>% 
       select(-location_name)
     
